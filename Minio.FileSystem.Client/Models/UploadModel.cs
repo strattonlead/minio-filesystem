@@ -4,6 +4,7 @@ namespace Minio.FileSystem.Client.Models
 {
     public class UploadModel
     {
+        public long? TenantId { get; set; }
         public Stream Stream { get; set; }
         public string Name { get; set; }
         public string ContentType { get; set; }

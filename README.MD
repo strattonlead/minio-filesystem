@@ -33,6 +33,10 @@ COOKIE_NAME=.myCookie
 DOMAIN=example.com
 COOKIE_PATH=/
 
+## API Authentication
+
+API_KEY=123456 (change me!)
+
 ## Application Options
 
 TENANCY_ENABLED=true

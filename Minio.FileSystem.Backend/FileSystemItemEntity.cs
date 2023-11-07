@@ -30,7 +30,7 @@ namespace Minio.FileSystem.Backend
         public Dictionary<string, object> MetaProperties { get; set; }
 
         [NotMapped]
-        public string StoragePath => $"{Id}.{Path.GetExtension(Name)}";
+        public string StoragePath => FileSystemItemType == FileSystemItemType.File ? $"{Id}{Path.GetExtension(Name)}" : null;
 
         [NotMapped]
         public bool IsFile => FileSystemItemType == FileSystemItemType.File;

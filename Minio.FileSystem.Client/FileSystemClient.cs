@@ -32,7 +32,16 @@ namespace Minio.FileSystem.Client
         /// </summary>
         public async Task<bool> TestAsync()
         {
-            var response = await _httpClient.GetAsync("/filesystem/index");
+            var response = await _httpClient.GetAsync("/filesystem");
+            return response.IsSuccessStatusCode;
+        }
+
+        /// <summary>
+        /// /filesystem/index
+        /// </summary>
+        public async Task<bool> TestApiKeyAsync()
+        {
+            var response = await _httpClient.GetAsync("/filesystem/test");
             return response.IsSuccessStatusCode;
         }
 
@@ -83,12 +92,48 @@ namespace Minio.FileSystem.Client
         }
 
         /// <summary>
-        /// /filesystem/createdirectory
+        /// /filesystem/getFileSystems
+        /// </summary>
+        public async Task<FileSystemEntity[]> GetFileSystemsAsync(GetFileSystemsModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/getFileSystems", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/getAllFileSystems
+        /// </summary>
+        public async Task<FileSystemItemEntity> GetAllFileSystemsAsync(CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.GetAsync("/filesystem/getAllFileSystems", cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/createDirectory
         /// </summary>
         public async Task<FileSystemItemEntity> CreateDirectoryAsync(CreateDirectoryModel model, CancellationToken cancellationToken = default)
         {
-            var response = await _httpClient.PostAsJsonAsync("/filesystem/createdirectory", model, cancellationToken);
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/createDirectory", model, cancellationToken);
             return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/createLink
+        /// </summary>
+        public async Task<FileSystemItemEntity> CreateLinkAsync(CreateLinkModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/createLink", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/getSize
+        /// </summary>
+        public async Task<long> GetSizeAsync(GetSizeModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/getSize", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<long>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>

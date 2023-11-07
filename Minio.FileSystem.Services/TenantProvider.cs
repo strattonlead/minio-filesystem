@@ -23,23 +23,29 @@ namespace Minio.FileSystem.Services
             _options = serviceProvider.GetRequiredService<ApplicationOptions>();
         }
 
+        private ITenant _tenant = null;
         public ITenant ActiveTenant
         {
             get
             {
+                if (_tenant != null)
+                {
+                    return _tenant;
+                }
+
                 if (_httpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated ?? false)
                 {
                     var claimName = _options.TenancyClaimName;
                     var sTenantId = _httpContextAccessor?.HttpContext?.User?.Claims?.FirstOrDefault(x => x.Type == claimName)?.Value;
                     if (long.TryParse(sTenantId, out var tenantId))
                     {
-                        return new Tenant() { Id = tenantId };
+                        _tenant = new Tenant() { Id = tenantId };
                     }
                 }
 
-                return null;
+                return _tenant;
             }
-            set { }
+            set { _tenant = value; }
         }
 
         public ITenant GetTenant(long id)
@@ -49,12 +55,24 @@ namespace Minio.FileSystem.Services
 
         public void RestoreTenancy()
         {
-            throw new NotImplementedException();
+            ActiveTenant = null;
         }
     }
 
     public static class TenantProviderExtensions
     {
+        public static void SetTenant(this ITenantProvider tenantProvider, long? id)
+        {
+            if (!id.HasValue)
+            {
+                tenantProvider.ActiveTenant = null;
+            }
+            else
+            {
+                tenantProvider.ActiveTenant = new Tenant() { Id = id.Value };
+            }
+        }
+
         public static void AddTenantProvider(this IServiceCollection services)
         {
             services.AddScoped<ITenantProvider, TenantProvider>();
