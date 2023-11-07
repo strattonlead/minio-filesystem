@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,21 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(Environment.GetEnvironmentVariable("MSSQL_CONNECTION_STRING") ?? "Server=localhost\\sqlexpress;Database=Minio.FileSystem.Local;Trusted_Connection=True;MultipleActiveResultSets=true");
 });
+
+var applicationName = Environment.GetEnvironmentVariable("APPLICATION_NAME");
+bool.TryParse(Environment.GetEnvironmentVariable("USE_DATA_PROTECTION"), out var useDataProtection);
+if (useDataProtection)
+{
+    builder.Services.AddDbContext<DataProtectionDbContext>(options =>
+    {
+        options.UseSqlServer(Environment.GetEnvironmentVariable("DATA_PROTECTION_CONNECTION_STRING"));
+    });
+
+    builder.Services.AddDataProtection()
+        .SetApplicationName(applicationName)
+        .PersistKeysToDbContext<DataProtectionDbContext>();
+}
+
 builder.Services.AddSingleton<ApplicationOptions>();
 builder.Services.AddFileCacheService();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
