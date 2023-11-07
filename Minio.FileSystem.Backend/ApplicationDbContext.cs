@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Minio.Filesystem.Backend
+namespace Minio.FileSystem.Backend
 {
     public class ApplicationDbContext : DbContext
     {

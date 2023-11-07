@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.IO;
 
-namespace Minio.Filesystem.Backend
+namespace Minio.FileSystem.Backend
 {
     [Index(nameof(TenantId))]
     [Index(nameof(VirtualPath))]

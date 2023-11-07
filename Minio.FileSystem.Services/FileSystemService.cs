@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 using Muffin.Tenancy.Services.Abstraction;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -83,13 +83,13 @@ namespace Minio.FileSystem.Services
                 await _dbContext.Entry(fileSystem).Collection(x => x.FileSystemItems).LoadAsync(cancellationToken);
             }
 
-            foreach (var fileSystemItem in fileSystem.FileSystemItems)
+            foreach (var FileSystemItem in fileSystem.FileSystemItems)
             {
-                if (fileSystemItem.IsFile)
+                if (FileSystemItem.IsFile)
                 {
-                    await _minioClient.RemoveObjectAsync(fileSystemItem, cancellationToken);
+                    await _minioClient.RemoveObjectAsync(FileSystemItem, cancellationToken);
                 }
-                _dbContext.Remove(fileSystemItem);
+                _dbContext.Remove(FileSystemItem);
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
@@ -108,9 +108,9 @@ namespace Minio.FileSystem.Services
             return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.FileSystemId == path.FileSystemId && x.VirtualPath == path.VirtualPath, cancellationToken);
         }
 
-        public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output)
+        public async Task CopyToStreamAsync(FileSystemItemEntity FileSystemItem, Stream output)
         {
-            await _minioClient.GetObjectAsync(fileSystemItem, output);
+            await _minioClient.GetObjectAsync(FileSystemItem, output);
         }
 
         public async Task<FileSystemItemEntity> UploadAsync(FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)
@@ -305,9 +305,9 @@ namespace Minio.FileSystem.Services
 
         #region Helpers
 
-        private async Task<FileSystemItemEntity[]> _children(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
+        private async Task<FileSystemItemEntity[]> _children(FileSystemItemEntity FileSystemItem, CancellationToken cancellationToken = default)
         {
-            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.StartsWith(fileSystemItem.VirtualPath)).ToArrayAsync(cancellationToken);
+            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.StartsWith(FileSystemItem.VirtualPath)).ToArrayAsync(cancellationToken);
         }
 
         private async Task<FileSystemItemEntity> _addAsync(FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)
@@ -479,14 +479,14 @@ namespace Minio.FileSystem.Services
                 return new FileSystemPath() { IsValid = false };
             }
 
-            if (!Guid.TryParse(parts[1], out var fileSystemId))
+            if (!Guid.TryParse(parts[1], out var FileSystemId))
             {
                 return new FileSystemPath() { IsValid = false };
             }
 
             return new FileSystemPath()
             {
-                FileSystemId = fileSystemId,
+                FileSystemId = FileSystemId,
                 VirtualPath = $"{s}",
                 IsValid = true
             };

@@ -1,9 +1,9 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+using System;
 
 #nullable disable
 
-namespace Minio.Filesystem.Backend.Migrations
+namespace Minio.FileSystem.Backend.Migrations
 {
     public partial class V1 : Migration
     {

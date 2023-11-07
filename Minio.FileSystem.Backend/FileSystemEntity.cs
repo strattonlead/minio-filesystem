@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
 using System.Collections.Generic;
 
-namespace Minio.Filesystem.Backend
+namespace Minio.FileSystem.Backend
 {
     [Index(nameof(TenantId))]
     public class FileSystemEntity

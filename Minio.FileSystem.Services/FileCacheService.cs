@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 using System.IO;
 
 namespace Minio.FileSystem.Services
@@ -14,15 +14,15 @@ namespace Minio.FileSystem.Services
             }
         }
 
-        public bool IsCached(FileSystemItemEntity fileSystemItem)
+        public bool IsCached(FileSystemItemEntity FileSystemItem)
         {
-            var path = Path.Combine("cache", fileSystemItem.StoragePath);
+            var path = Path.Combine("cache", FileSystemItem.StoragePath);
             return File.Exists(path);
         }
 
-        public Stream OpenReadStream(FileSystemItemEntity fileSystemItem)
+        public Stream OpenReadStream(FileSystemItemEntity FileSystemItem)
         {
-            var path = Path.Combine("cache", fileSystemItem.StoragePath);
+            var path = Path.Combine("cache", FileSystemItem.StoragePath);
             if (File.Exists(path))
             {
                 return File.OpenRead(path);
@@ -30,9 +30,9 @@ namespace Minio.FileSystem.Services
             return null;
         }
 
-        public void Cache(FileSystemItemEntity fileSystemItem, Stream stream)
+        public void Cache(FileSystemItemEntity FileSystemItem, Stream stream)
         {
-            var path = Path.Combine("cache", fileSystemItem.StoragePath);
+            var path = Path.Combine("cache", FileSystemItem.StoragePath);
             if (File.Exists(path))
             {
                 return;
@@ -44,9 +44,9 @@ namespace Minio.FileSystem.Services
             }
         }
 
-        public Stream OpenWriteStream(FileSystemItemEntity fileSystemItem)
+        public Stream OpenWriteStream(FileSystemItemEntity FileSystemItem)
         {
-            var path = Path.Combine("cache", fileSystemItem.StoragePath);
+            var path = Path.Combine("cache", FileSystemItem.StoragePath);
             if (File.Exists(path))
             {
                 return null;

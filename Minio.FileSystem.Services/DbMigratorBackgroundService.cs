@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

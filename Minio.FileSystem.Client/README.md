@@ -1,3 +1,3 @@
 # Minio.FileSystem.Backend
 
-Backend classes for the minio filesystem server
+Backend classes for the minio FileSystem server

@@ -14,7 +14,7 @@
 	  <NoWarn>$(NoWarn);CS1591</NoWarn>
 	  <PackageTags>Minio</PackageTags>
 	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
-	  <Description>Http Client for the Minio FileSystem Server</Description>
+	  <Description>Http Client for the Minio filesystem Server</Description>
 	  <PackageProjectUrl>https://github.com/strattonlead/minio-filesystem</PackageProjectUrl>
 	  <PublishRepositoryUrl>true</PublishRepositoryUrl>
 	  <PrivateRepositoryUrl>https://github.com/strattonlead/minio-filesystem.git</PrivateRepositoryUrl>
@@ -39,7 +39,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Minio.Filesystem.Backend\Minio.FileSystem.Backend.csproj" />
+	  <ProjectReference Include="..\Minio.FileSystem.Backend\Minio.FileSystem.Backend.csproj" />
 	</ItemGroup>
 
 </Project>

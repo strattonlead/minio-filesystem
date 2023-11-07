@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 using Minio.FileSystem.Services;
 using System;
 

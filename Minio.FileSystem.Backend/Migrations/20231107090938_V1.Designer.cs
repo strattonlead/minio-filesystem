@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 
 #nullable disable
 
-namespace Minio.Filesystem.Backend.Migrations
+namespace Minio.FileSystem.Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20231107090938_V1")]
@@ -24,7 +24,7 @@ namespace Minio.Filesystem.Backend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("Minio.Filesystem.Backend.FileSystemEntity", b =>
+            modelBuilder.Entity("Minio.FileSystem.Backend.FileSystemEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -43,7 +43,7 @@ namespace Minio.Filesystem.Backend.Migrations
                     b.ToTable("FileSystems");
                 });
 
-            modelBuilder.Entity("Minio.Filesystem.Backend.FileSystemItemEntity", b =>
+            modelBuilder.Entity("Minio.FileSystem.Backend.FileSystemItemEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -87,9 +87,9 @@ namespace Minio.Filesystem.Backend.Migrations
                     b.ToTable("FileSystemItems");
                 });
 
-            modelBuilder.Entity("Minio.Filesystem.Backend.FileSystemItemEntity", b =>
+            modelBuilder.Entity("Minio.FileSystem.Backend.FileSystemItemEntity", b =>
                 {
-                    b.HasOne("Minio.Filesystem.Backend.FileSystemEntity", "FileSystem")
+                    b.HasOne("Minio.FileSystem.Backend.FileSystemEntity", "FileSystem")
                         .WithMany("FileSystemItems")
                         .HasForeignKey("FileSystemId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -98,7 +98,7 @@ namespace Minio.Filesystem.Backend.Migrations
                     b.Navigation("FileSystem");
                 });
 
-            modelBuilder.Entity("Minio.Filesystem.Backend.FileSystemEntity", b =>
+            modelBuilder.Entity("Minio.FileSystem.Backend.FileSystemEntity", b =>
                 {
                     b.Navigation("FileSystemItems");
                 });

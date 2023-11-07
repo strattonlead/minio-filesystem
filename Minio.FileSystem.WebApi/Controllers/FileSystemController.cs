@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Minio.Filesystem.Backend;
+using Minio.FileSystem.Backend;
 using Minio.FileSystem.Services;
 using Minio.FileSystem.WebApi.Models;
 using Muffin.Tenancy.Services.Abstraction;
@@ -50,7 +50,7 @@ namespace Minio.FileSystem.WebApi.Controllers
             return await _fileSystemService.FilterAsync(model.Filter, _applicationLifetime.ApplicationStopping);
         }
 
-        [HttpPost, Route("/filesystem/filterfilesystems")]
+        [HttpPost, Route("/filesystem/filterFileSystems")]
         public async Task<FileSystemEntity[]> FilterFileSystemsAsync([FromBody] FilterModel model)
         {
             return await _fileSystemService.FilterFileSystemsAsync(model.Filter, _applicationLifetime.ApplicationStopping);
@@ -80,19 +80,19 @@ namespace Minio.FileSystem.WebApi.Controllers
             return await _fileSystemService.MoveAsync(model.SourcePath, model.DestinationPath, model.Override, _applicationLifetime.ApplicationStopping);
         }
 
-        [HttpPost, Route("/filesystem/createfilesystem")]
+        [HttpPost, Route("/filesystem/createFileSystem")]
         public async Task<FileSystemEntity> CreateFileSystemAsync([FromBody] CreateFileSystemModel model)
         {
             return await _fileSystemService.CreateFileSystemAsync(model.Name, _applicationLifetime.ApplicationStopping);
         }
 
-        [HttpPost, Route("/filesystem/renamefilesystem")]
+        [HttpPost, Route("/filesystem/renameFileSystem")]
         public async Task<FileSystemEntity> RenameFileSystemAsync([FromBody] RenameFileSystemModel model)
         {
             return await _fileSystemService.RenameFileSystemAsync(model.Id, model.Name, _applicationLifetime.ApplicationStopping);
         }
 
-        [HttpPost, Route("/filesystem/deletefilesystem")]
+        [HttpPost, Route("/filesystem/deleteFileSystem")]
         public async Task<Guid?> DeleteFileSystemAsync([FromBody] DeleteFileSystemModel model)
         {
             return await _fileSystemService.DeleteFileSystemAsync(model.Id, _applicationLifetime.ApplicationStopping);
