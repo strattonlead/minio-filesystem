@@ -1,0 +1,37 @@
+{
+  "profiles": {
+    "Minio.FileSystem.WebApi": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "filesystem/index",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MSSQL_CONNECTION_STRING": "Server=localhost\\sqlexpress;Database=Minio.FileSystem.Local;Trusted_Connection=True;MultipleActiveResultSets=true",
+        "S3_ENDPOINT": "s3-eu-central-1.ionoscloud.com",
+        "S3_ACCESS_KEY": "0816dffe57b9e1b9e7be",
+        "S3_SECRET_KEY": "6G4cRGQu0nHXh3JckQc3yU4FxrTmOtYRrjrrQxla",
+        "S3_BUCKET_NAME": "Minio.FileSystem.Local.T{0}",
+        "FILE_CACHE_ENABLED": "true"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:7236;http://localhost:5236"
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "filesystem/index",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:51881",
+      "sslPort": 44378
+    }
+  }
+}
