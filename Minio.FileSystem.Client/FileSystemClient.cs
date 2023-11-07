@@ -13,13 +13,14 @@ namespace Minio.FileSystem.Client
 {
     public class FileSystemClient
     {
-        private readonly FileSystemClientOptions _options;
         private readonly HttpClient _httpClient;
 
         public FileSystemClient(FileSystemClientOptions options)
         {
-            _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri(options.BaseUrl);
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(options.BaseUrl)
+            };
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer:", options.ApiKey);
         }
