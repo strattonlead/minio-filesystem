@@ -48,6 +48,10 @@ namespace Minio.FileSystem.WebApi.Controllers
         [HttpPost, ApiKey, Route("/filesystem/get")]
         public async Task<FileSystemItemEntity> GetAsync([FromBody] GetModel model)
         {
+            if (model.Id.HasValue)
+            {
+                return await _fileSystemService.GetAsync(model.Id.Value, _applicationLifetime.ApplicationStopping);
+            }
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
             return await _fileSystemService.FindAsync(path);
         }
