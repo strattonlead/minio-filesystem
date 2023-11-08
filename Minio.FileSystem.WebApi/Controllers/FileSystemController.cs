@@ -107,6 +107,11 @@ namespace Minio.FileSystem.WebApi.Controllers
         [HttpPost, ApiKey, Route("/filesystem/delete")]
         public async Task<Guid?> DeleteAsync([FromBody] DeleteModel model)
         {
+            if (model.Id.HasValue)
+            {
+                return await _fileSystemService.DeleteAsync(model.Id.Value, _applicationLifetime.ApplicationStopping);
+            }
+
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
             return await _fileSystemService.DeleteAsync(path, _applicationLifetime.ApplicationStopping);
         }
@@ -135,6 +140,50 @@ namespace Minio.FileSystem.WebApi.Controllers
         public async Task<Guid?> DeleteFileSystemAsync([FromBody] DeleteFileSystemModel model)
         {
             return await _fileSystemService.DeleteFileSystemAsync(model.Id, _applicationLifetime.ApplicationStopping);
+        }
+
+        [HttpPost, ApiKey, Route("/filesystem/download")]
+        public async Task<IActionResult> DownloadAsync([FromQuery] Guid id)
+        {
+            var fileSystemItem = await _fileSystemService.GetAsync(id, _applicationLifetime.ApplicationStopping);
+            if (fileSystemItem == null)
+            {
+                return NotFound();
+            }
+
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
+
+            if (_options.FileCacheEnabled)
+            {
+                if (_cache.IsCached(fileSystemItem))
+                {
+                    var readStream = _cache.OpenReadStream(fileSystemItem);
+                    return File(readStream, fileSystemItem.ContentType, fileSystemItem.Name);
+                }
+
+                using (var writeStream = _cache.OpenWriteStream(fileSystemItem))
+                {
+                    await _fileSystemService.CopyToStreamAsync(fileSystemItem, writeStream);
+                }
+
+                if (_cache.IsCached(fileSystemItem))
+                {
+                    var readStream = _cache.OpenReadStream(fileSystemItem);
+                    return File(readStream, fileSystemItem.ContentType, fileSystemItem.Name);
+                }
+            }
+
+            using (var mem = new MemoryStream())
+            {
+                await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem);
+                mem.Seek(0, SeekOrigin.Begin);
+
+                return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);
+            }
         }
 
         [HttpGet, Authorize, AllowAnonymous, Route("/{fileSystemId:guid}/{**catchAll}")]

@@ -112,6 +112,11 @@ namespace Minio.FileSystem.Services
             return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.FileSystemId == path.FileSystemId && x.VirtualPath == path.VirtualPath && x.TenantId == path.TenantId, cancellationToken);
         }
 
+        public async Task<FileSystemItemEntity> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
         public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output)
         {
             _tenantProvider.SetTenant(fileSystemItem.TenantId);
@@ -227,6 +232,17 @@ namespace Minio.FileSystem.Services
             return fileSystemItem;
         }
 
+        public async Task<Guid?> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var fileSystemItem = await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (fileSystemItem == null)
+            {
+                return null;
+            }
+
+            return await _deleteAsync(fileSystemItem, cancellationToken);
+        }
+
         public async Task<Guid?> DeleteAsync(FileSystemPath path, CancellationToken cancellationToken = default)
         {
             var fileSystemItem = await FindAsync(path, cancellationToken);
@@ -235,30 +251,7 @@ namespace Minio.FileSystem.Services
                 return null;
             }
 
-            _tenantProvider.SetTenant(fileSystemItem.TenantId);
-            if (fileSystemItem.IsFile)
-            {
-                await _minioClient.RemoveObjectAsync(fileSystemItem, cancellationToken);
-            }
-            else if (fileSystemItem.IsDirectory)
-            {
-                var children = await _children(fileSystemItem, cancellationToken);
-                foreach (var child in children)
-                {
-                    if (child.IsFile)
-                    {
-                        await _minioClient.RemoveObjectAsync(child, cancellationToken);
-                    }
-                    _dbContext.Remove(child);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
-            }
-            _tenantProvider.RestoreTenancy();
-
-            _dbContext.Remove(fileSystemItem);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            return fileSystemItem.Id;
+            return await _deleteAsync(fileSystemItem, cancellationToken);
         }
 
         public async Task<FileSystemItemEntity> MoveAsync(FileSystemPath source, FileSystemPath destination, bool @override, CancellationToken cancellationToken = default)
@@ -455,6 +448,35 @@ namespace Minio.FileSystem.Services
         }
 
 #pragma warning disable CA1416
+
+        private async Task<Guid?> _deleteAsync(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
+        {
+            _tenantProvider.SetTenant(fileSystemItem.TenantId);
+            if (fileSystemItem.IsFile)
+            {
+                await _minioClient.RemoveObjectAsync(fileSystemItem, cancellationToken);
+            }
+            else if (fileSystemItem.IsDirectory)
+            {
+                var children = await _children(fileSystemItem, cancellationToken);
+                foreach (var child in children)
+                {
+                    if (child.IsFile)
+                    {
+                        await _minioClient.RemoveObjectAsync(child, cancellationToken);
+                    }
+                    _dbContext.Remove(child);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+            _tenantProvider.RestoreTenancy();
+
+            _dbContext.Remove(fileSystemItem);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return fileSystemItem.Id;
+        }
+
         private async Task _readMetaProperties(FileSystemItemEntity fileSystemItem, string localFilePath, CancellationToken cancellationToken = default)
         {
             if (fileSystemItem?.ContentType?.StartsWith("video") ?? false)

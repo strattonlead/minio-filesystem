@@ -1,6 +1,7 @@
 ﻿using Minio.FileSystem.Backend;
 using Minio.FileSystem.Client.Models;
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -179,6 +180,15 @@ namespace Minio.FileSystem.Client
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/deleteFileSystem", model, cancellationToken);
             return await response.Content.ReadFromJsonAsync<Guid?>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/download?id={id}
+        /// </summary>
+        public async Task<Stream> DownloadAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.GetAsync($"/filesystem/download?id={id}", cancellationToken);
+            return await response.Content.ReadAsStreamAsync(cancellationToken);
         }
 
         #endregion
