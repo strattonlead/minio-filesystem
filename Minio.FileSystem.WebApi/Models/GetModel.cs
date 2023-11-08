@@ -1,7 +1,10 @@
-﻿namespace Minio.FileSystem.WebApi.Models
+﻿using System;
+
+namespace Minio.FileSystem.WebApi.Models
 {
     public class GetModel
     {
+        public Guid? Id { get; set; }
         public string VirtualPath { get; set; }
         public long? TenantId { get; set; }
     }
