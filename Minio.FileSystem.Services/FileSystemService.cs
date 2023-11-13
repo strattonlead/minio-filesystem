@@ -117,6 +117,26 @@ namespace Minio.FileSystem.Services
             return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public async Task<FileSystemItemEntity[]> GetListAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var item = await GetAsync(id, cancellationToken);
+            if (!item.IsDirectory)
+            {
+                return null;
+            }
+            return await _children(item, cancellationToken);
+        }
+
+        public async Task<FileSystemItemEntity[]> GetListAsync(FileSystemPath path, CancellationToken cancellationToken = default)
+        {
+            var item = await FindAsync(path, cancellationToken);
+            if (!item.IsDirectory)
+            {
+                return null;
+            }
+            return await _children(item, cancellationToken);
+        }
+
         public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output)
         {
             _tenantProvider.SetTenant(fileSystemItem.TenantId);
@@ -213,23 +233,7 @@ namespace Minio.FileSystem.Services
 
         public async Task<FileSystemItemEntity> CreateDirectoryAsync(FileSystemPath path, CancellationToken cancellationToken = default)
         {
-            var fileSystemItem = await FindAsync(path, cancellationToken);
-            if (fileSystemItem == null)
-            {
-                fileSystemItem = new FileSystemItemEntity()
-                {
-                    FileSystemId = path.FileSystemId,
-                    FileSystemItemType = FileSystemItemType.Directory,
-                    Name = Path.GetFileName(path.VirtualPath),
-                    VirtualPath = path.VirtualPath,
-                    TenantId = path.TenantId
-                };
-
-                _dbContext.Add(fileSystemItem);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-
-            return fileSystemItem;
+            return await _addDirectoryAsync(path, cancellationToken);
         }
 
         public async Task<Guid?> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -294,7 +298,7 @@ namespace Minio.FileSystem.Services
                 return null;
             }
 
-            if (sourceFileSystemItem.IsFile)
+            if (sourceFileSystemItem.IsFile || sourceFileSystemItem.IsExternalLink)
             {
                 if (destinationFileSystemItem != null)
                 {
@@ -304,6 +308,10 @@ namespace Minio.FileSystem.Services
                 sourceFileSystemItem.Name = Path.GetFileName(destination.VirtualPath);
                 sourceFileSystemItem.VirtualPath = destination.VirtualPath;
                 sourceFileSystemItem.FileSystemId = destination.FileSystemId;
+                sourceFileSystemItem.ParentId = destinationFileSystemItem.ParentId;
+
+                _dbContext.Update(sourceFileSystemItem);
+                await _dbContext.SaveChangesAsync(cancellationToken);
             }
             else if (sourceFileSystemItem.IsDirectory)
             {
@@ -315,27 +323,23 @@ namespace Minio.FileSystem.Services
                 sourceFileSystemItem.Name = Path.GetFileName(destination.VirtualPath);
                 sourceFileSystemItem.VirtualPath = destination.VirtualPath;
                 sourceFileSystemItem.FileSystemId = destination.FileSystemId;
+                sourceFileSystemItem.ParentId = destinationFileSystemItem.ParentId;
 
-                var children = await _children(sourceFileSystemItem, cancellationToken);
+                _dbContext.Update(sourceFileSystemItem);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                var children = await _allChildren(sourceFileSystemItem, cancellationToken);
                 foreach (var child in children)
                 {
+                    var childItem = await FindAsync(destination, cancellationToken);
                     child.VirtualPath = child.VirtualPath.Replace(source.VirtualPath, destination.VirtualPath);
                     child.FileSystemId = destination.FileSystemId;
+                    child.ParentId = childItem.ParentId;
+
+                    _dbContext.Update(child);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                 }
             }
-            else if (sourceFileSystemItem.IsExternalLink)
-            {
-                if (destinationFileSystemItem == null)
-                {
-                    return null;
-                }
-
-                sourceFileSystemItem.ExternalUrl = destinationFileSystemItem.ExternalUrl;
-                await DeleteAsync(destination, cancellationToken);
-            }
-
-            _dbContext.Update(sourceFileSystemItem);
-            await _dbContext.SaveChangesAsync(cancellationToken);
 
             return sourceFileSystemItem;
         }
@@ -344,13 +348,80 @@ namespace Minio.FileSystem.Services
 
         #region Helpers
 
-        private async Task<FileSystemItemEntity[]> _children(FileSystemItemEntity FileSystemItem, CancellationToken cancellationToken = default)
+        private async Task<FileSystemItemEntity> _parent(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
         {
-            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.StartsWith(FileSystemItem.VirtualPath)).ToArrayAsync(cancellationToken);
+            if (fileSystemItem == null)
+            {
+                return null;
+            }
+
+            if (fileSystemItem.Parent == null && fileSystemItem.ParentId.HasValue)
+            {
+                await _dbContext.Entry(fileSystemItem).Reference(x => x.Parent).LoadAsync(cancellationToken);
+            }
+
+            return fileSystemItem.Parent;
+        }
+
+        private async Task<FileSystemItemEntity> _parent(Guid id, CancellationToken cancellationToken = default)
+        {
+            var fileSystemItem = await GetAsync(id, cancellationToken);
+            return await _parent(fileSystemItem, cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity> _parent(FileSystemPath path, CancellationToken cancellationToken = default)
+        {
+            var fileSystemItem = await FindAsync(path, cancellationToken);
+            return await _parent(fileSystemItem, cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity[]> _children(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.FileSystemItems.Where(x => x.ParentId == fileSystemItem.Id).ToArrayAsync(cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity[]> _allChildren(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.StartsWith(fileSystemItem.VirtualPath)).ToArrayAsync(cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity> _addDirectoryAsync(FileSystemPath path, CancellationToken cancellationToken = default)
+        {
+            var fileSystemItem = await FindAsync(path, cancellationToken);
+            if (fileSystemItem != null && fileSystemItem.IsDirectory)
+            {
+                return fileSystemItem;
+            }
+
+            var parent = Directory.GetParent(path.VirtualPath).FullName;
+            var parentPath = FileSystemPath.FromString(parent, path.TenantId);
+
+            var parts = parentPath.VirtualPath.Split("/");
+            var tempPath = parts.FirstOrDefault();
+            foreach (var part in parts.Skip(1))
+            {
+                tempPath = $"{tempPath}/{part}";
+
+                fileSystemItem = new FileSystemItemEntity()
+                {
+                    FileSystemId = path.FileSystemId,
+                    FileSystemItemType = FileSystemItemType.Directory,
+                    Name = Path.GetFileName(tempPath),
+                    VirtualPath = tempPath,
+                    TenantId = path.TenantId
+                };
+
+                _dbContext.Add(fileSystemItem);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            return fileSystemItem;
         }
 
         private async Task<FileSystemItemEntity> _addAsync(FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)
         {
+            var parent = await _addDirectoryAsync(path, cancellationToken);
+
             var fileSystemItem = new FileSystemItemEntity()
             {
                 FileSystemId = path.FileSystemId,
@@ -359,6 +430,7 @@ namespace Minio.FileSystem.Services
                 Name = Path.GetFileName(path.VirtualPath),
                 FileSystemItemType = FileSystemItemType.File,
                 TenantId = path.TenantId,
+                Parent = parent
             };
 
             _dbContext.Add(fileSystemItem);
@@ -458,7 +530,7 @@ namespace Minio.FileSystem.Services
             }
             else if (fileSystemItem.IsDirectory)
             {
-                var children = await _children(fileSystemItem, cancellationToken);
+                var children = await _allChildren(fileSystemItem, cancellationToken);
                 foreach (var child in children)
                 {
                     if (child.IsFile)

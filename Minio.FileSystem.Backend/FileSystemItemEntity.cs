@@ -15,9 +15,10 @@ namespace Minio.FileSystem.Backend
         public Guid Id { get; set; }
         public Guid FileSystemId { get; set; }
         public FileSystemEntity FileSystem { get; set; }
-        //public Guid? ParentId { get; set; }
-        //public FileSystemItemEntity Parent { get; set; }
-        //public List<FileSystemItemEntity> Children { get; set; }
+
+        public Guid? ParentId { get; set; }
+        public FileSystemItemEntity Parent { get; set; }
+        public List<FileSystemItemEntity> Children { get; set; }
 
         public string Name { get; set; }
         public long? SizeInBytes { get; set; }
@@ -48,10 +49,10 @@ namespace Minio.FileSystem.Backend
         {
             builder.HasKey(x => x.Id);
 
-            //builder.HasMany(x => x.Children)
-            //    .WithOne(x => x.Parent)
-            //    .HasForeignKey(x => x.ParentId)
-            //    .OnDelete(DeleteBehavior.ClientCascade);
+            builder.HasMany(x => x.Children)
+                .WithOne(x => x.Parent)
+                .HasForeignKey(x => x.ParentId)
+                .OnDelete(DeleteBehavior.ClientCascade);
 
             builder.Property(x => x.MetaProperties)
                 .HasConversion(x => JsonConvert.SerializeObject(x), x => !string.IsNullOrWhiteSpace(x) ? JsonConvert.DeserializeObject<Dictionary<string, object>>(x) : null);

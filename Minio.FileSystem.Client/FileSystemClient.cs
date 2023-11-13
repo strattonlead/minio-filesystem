@@ -56,6 +56,15 @@ namespace Minio.FileSystem.Client
         }
 
         /// <summary>
+        /// /filesystem/getList
+        /// </summary>
+        public async Task<FileSystemItemEntity[]> GetListAsync(GetListModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/getList", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
         /// /filesystem/filter
         /// </summary>
         public async Task<FileSystemItemEntity[]> FilterAsync(FilterModel model, CancellationToken cancellationToken = default)
