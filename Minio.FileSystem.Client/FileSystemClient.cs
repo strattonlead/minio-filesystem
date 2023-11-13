@@ -23,7 +23,7 @@ namespace Minio.FileSystem.Client
                 BaseAddress = new Uri(options.BaseUrl)
             };
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", options.ApiKey);
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
         }
 
         #region Actions
