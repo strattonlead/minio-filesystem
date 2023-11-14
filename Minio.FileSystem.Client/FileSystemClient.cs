@@ -93,8 +93,14 @@ namespace Minio.FileSystem.Client
                 content.Add(streamContent, "file", model.Name);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(model.ContentType);
 
-                var stringContent = new StringContent(model.VirtualPath, Encoding.UTF8, "text/plain");
-                content.Add(stringContent, "virtualPath");
+                var virtualPathContent = new StringContent(model.VirtualPath, Encoding.UTF8, "text/plain");
+                content.Add(virtualPathContent, "virtualPath");
+
+                if (model.TenantId.HasValue)
+                {
+                    var tenantIdContent = new StringContent(model.TenantId.Value.ToString(), Encoding.UTF8, "text/plain");
+                    content.Add(tenantIdContent, "tenantId");
+                }
 
                 var response = await _httpClient.PostAsync("/filesystem/upload", content, cancellationToken);
                 return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);

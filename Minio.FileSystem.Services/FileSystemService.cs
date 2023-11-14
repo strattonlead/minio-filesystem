@@ -488,6 +488,11 @@ namespace Minio.FileSystem.Services
 
         private async Task<FileSystemItemEntity> _addDirectoryAsync(FileSystemPath path, CancellationToken cancellationToken = default)
         {
+            if (path.IsRoot)
+            {
+                return null;
+            }
+
             var fileSystemItem = await FindAsync(path, cancellationToken);
             if (fileSystemItem != null && fileSystemItem.IsDirectory)
             {
@@ -531,9 +536,21 @@ namespace Minio.FileSystem.Services
             return await _addAsync(path, file.ContentType, file.OpenReadStream(), cancellationToken);
         }
 
+        private string _parentPath(string path)
+        {
+            var parts = path.Split("/");
+            return string.Join("/", parts.Take(parts.Length - 1));
+        }
+
+        private FileSystemPath _parentPath(FileSystemPath path)
+        {
+            return FileSystemPath.FromString(_parentPath(path.VirtualPath), path.TenantId);
+        }
+
         private async Task<FileSystemItemEntity> _addAsync(FileSystemPath path, string contentType, Stream stream, CancellationToken cancellationToken = default)
         {
-            var parent = await _addDirectoryAsync(path, cancellationToken);
+            var parentPath = _parentPath(path);
+            var parent = await _addDirectoryAsync(parentPath, cancellationToken);
 
             var fileSystemItem = new FileSystemItemEntity()
             {
