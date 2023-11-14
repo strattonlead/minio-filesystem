@@ -11,6 +11,7 @@ using Minio.FileSystem.WebApi.Models;
 using Muffin.Tenancy.Services.Abstraction;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Minio.FileSystem.WebApi.Controllers
@@ -23,6 +24,7 @@ namespace Minio.FileSystem.WebApi.Controllers
         private readonly ITenantProvider _tenantProvider;
         private readonly ApplicationOptions _options;
         private readonly FileCacheService _cache;
+        private CancellationToken _cancellationToken => _applicationLifetime.ApplicationStopping;
 
         public FileSystemController(IServiceProvider serviceProvider)
         {
@@ -50,10 +52,10 @@ namespace Minio.FileSystem.WebApi.Controllers
         {
             if (model.Id.HasValue)
             {
-                return await _fileSystemService.GetAsync(model.Id.Value, _applicationLifetime.ApplicationStopping);
+                return await _fileSystemService.GetAsync(model.Id.Value, _cancellationToken);
             }
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.FindAsync(path, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.FindAsync(path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/getList")]
@@ -61,62 +63,62 @@ namespace Minio.FileSystem.WebApi.Controllers
         {
             if (model.Id.HasValue)
             {
-                return await _fileSystemService.GetListAsync(model.Id.Value, _applicationLifetime.ApplicationStopping);
+                return await _fileSystemService.GetListAsync(model.Id.Value, _cancellationToken);
             }
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.GetListAsync(path, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.GetListAsync(path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/getFileSystems")]
         public async Task<FileSystemEntity[]> GetFileSystemsAsync([FromBody] GetFileSystemsModel model)
         {
-            return await _fileSystemService.GetFileSystemsAsync(model.TenantId, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.GetFileSystemsAsync(model.TenantId, _cancellationToken);
         }
 
         [HttpGet, ApiKey, Route("/filesystem/getAllFileSystems")]
         public async Task<FileSystemEntity[]> GetFileSystemsAsync()
         {
-            return await _fileSystemService.GetAllFileSystemsAsync(_applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.GetAllFileSystemsAsync(_cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/filter")]
         public async Task<FileSystemItemEntity[]> FilterAsync([FromBody] FilterModel model)
         {
-            return await _fileSystemService.FilterAsync(model.Filter, model.VirtualPath, model.TenantId, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.FilterAsync(model.Filter, model.VirtualPath, model.TenantId, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/filterFileSystems")]
         public async Task<FileSystemEntity[]> FilterFileSystemsAsync([FromBody] FilterModel model)
         {
-            return await _fileSystemService.FilterFileSystemsAsync(model.Filter, model.TenantId, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.FilterFileSystemsAsync(model.Filter, model.TenantId, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/upload")]
         public async Task<FileSystemItemEntity> UploadAsync([FromForm] UploadModel model)
         {
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.UploadAsync(path, model.File, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.UploadAsync(path, model.File, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/createLink")]
         public async Task<FileSystemItemEntity> CreateLinkAsync([FromBody] CreateLinkModel model)
         {
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.CreateLinkAsync(path, model.Url, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.CreateLinkAsync(path, model.Url, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/getSize")]
         public async Task<long> GetSizeAsync([FromBody] GetSizeModel model)
         {
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.GetSizeAsync(path, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.GetSizeAsync(path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/createDirectory")]
         public async Task<FileSystemItemEntity> CreateDirectoryAsync([FromBody] CreateDirectoryModel model)
         {
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.CreateDirectoryAsync(path, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.CreateDirectoryAsync(path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/delete")]
@@ -124,11 +126,11 @@ namespace Minio.FileSystem.WebApi.Controllers
         {
             if (model.Id.HasValue)
             {
-                return await _fileSystemService.DeleteAsync(model.Id.Value, _applicationLifetime.ApplicationStopping);
+                return await _fileSystemService.DeleteAsync(model.Id.Value, _cancellationToken);
             }
 
             var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-            return await _fileSystemService.DeleteAsync(path, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.DeleteAsync(path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/move")]
@@ -136,31 +138,45 @@ namespace Minio.FileSystem.WebApi.Controllers
         {
             var sourcePath = FileSystemPath.FromString(model.SourcePath, model.TenantId);
             var destinationPath = FileSystemPath.FromString(model.DestinationPath, model.TenantId);
-            return await _fileSystemService.MoveAsync(sourcePath, destinationPath, model.Override, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.MoveAsync(sourcePath, destinationPath, model.Override, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/createFileSystem")]
         public async Task<FileSystemEntity> CreateFileSystemAsync([FromBody] CreateFileSystemModel model)
         {
-            return await _fileSystemService.CreateFileSystemAsync(model.Name, model.TenantId, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.CreateFileSystemAsync(model.Name, model.TenantId, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/renameFileSystem")]
         public async Task<FileSystemEntity> RenameFileSystemAsync([FromBody] RenameFileSystemModel model)
         {
-            return await _fileSystemService.RenameFileSystemAsync(model.Id, model.Name, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.RenameFileSystemAsync(model.Id, model.Name, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/deleteFileSystem")]
         public async Task<Guid?> DeleteFileSystemAsync([FromBody] DeleteFileSystemModel model)
         {
-            return await _fileSystemService.DeleteFileSystemAsync(model.Id, _applicationLifetime.ApplicationStopping);
+            return await _fileSystemService.DeleteFileSystemAsync(model.Id, _cancellationToken);
+        }
+
+        [HttpPost, ApiKey, Route("/filesystem/createZip")]
+        public async Task<FileSystemItemEntity> CreateZipAsync([FromBody] CreateZipModel model)
+        {
+            var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
+
+            if (model.Ids != null)
+            {
+                return await _fileSystemService.CreateZipAsync(model.Ids, path, _cancellationToken);
+            }
+
+            var ids = await _fileSystemService.GetIdsAsync(model.VirtualPaths, model.TenantId, _cancellationToken);
+            return await _fileSystemService.CreateZipAsync(ids, path, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/download")]
         public async Task<IActionResult> DownloadAsync([FromQuery] Guid id)
         {
-            var fileSystemItem = await _fileSystemService.GetAsync(id, _applicationLifetime.ApplicationStopping);
+            var fileSystemItem = await _fileSystemService.GetAsync(id, _cancellationToken);
             if (fileSystemItem == null)
             {
                 return NotFound();
@@ -170,6 +186,16 @@ namespace Minio.FileSystem.WebApi.Controllers
             if (syncIOFeature != null)
             {
                 syncIOFeature.AllowSynchronousIO = true;
+            }
+
+            if (fileSystemItem.IsDirectory)
+            {
+                using (var mem = new MemoryStream())
+                {
+                    await _fileSystemService.ZipToStreamAsync(fileSystemItem, mem, _cancellationToken);
+                    mem.Seek(0, SeekOrigin.Begin);
+                    return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);
+                }
             }
 
             if (_options.FileCacheEnabled)
@@ -182,7 +208,7 @@ namespace Minio.FileSystem.WebApi.Controllers
 
                 using (var writeStream = _cache.OpenWriteStream(fileSystemItem))
                 {
-                    await _fileSystemService.CopyToStreamAsync(fileSystemItem, writeStream);
+                    await _fileSystemService.CopyToStreamAsync(fileSystemItem, writeStream, _cancellationToken);
                 }
 
                 if (_cache.IsCached(fileSystemItem))
@@ -194,7 +220,7 @@ namespace Minio.FileSystem.WebApi.Controllers
 
             using (var mem = new MemoryStream())
             {
-                await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem);
+                await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem, _cancellationToken);
                 mem.Seek(0, SeekOrigin.Begin);
 
                 return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);
@@ -211,7 +237,7 @@ namespace Minio.FileSystem.WebApi.Controllers
                 return BadRequest("Not a valid path. (e.g. /00000000-0000-0000-0000-000000000000/directory/file.txt");
             }
 
-            var fileSystemItem = await _fileSystemService.FindAsync(path, _applicationLifetime.ApplicationStopping);
+            var fileSystemItem = await _fileSystemService.FindAsync(path, _cancellationToken);
             if (fileSystemItem == null)
             {
                 return NotFound($"File not found at path {path.VirtualPath}");
@@ -238,7 +264,7 @@ namespace Minio.FileSystem.WebApi.Controllers
 
                 using (var writeStream = _cache.OpenWriteStream(fileSystemItem))
                 {
-                    await _fileSystemService.CopyToStreamAsync(fileSystemItem, writeStream);
+                    await _fileSystemService.CopyToStreamAsync(fileSystemItem, writeStream, _cancellationToken);
                 }
 
                 if (_cache.IsCached(fileSystemItem))
@@ -250,7 +276,7 @@ namespace Minio.FileSystem.WebApi.Controllers
 
             using (var mem = new MemoryStream())
             {
-                await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem);
+                await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem, _cancellationToken);
                 mem.Seek(0, SeekOrigin.Begin);
 
                 return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);

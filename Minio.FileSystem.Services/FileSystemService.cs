@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,6 +118,16 @@ namespace Minio.FileSystem.Services
             return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public async Task<FileSystemItemEntity[]> GetManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.FileSystemItems.Where(x => ids.Contains(x.Id)).ToArrayAsync(cancellationToken);
+        }
+
+        public async Task<Guid[]> GetIdsAsync(IEnumerable<string> virtualPaths, long? tenantId, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.FileSystemItems.Where(x => x.TenantId == tenantId && virtualPaths.Contains(x.VirtualPath)).Select(x => x.Id).ToArrayAsync(cancellationToken);
+        }
+
         public async Task<FileSystemItemEntity[]> GetListAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var item = await GetAsync(id, cancellationToken);
@@ -129,7 +140,17 @@ namespace Minio.FileSystem.Services
 
         public async Task<FileSystemItemEntity[]> GetListAsync(FileSystemPath path, CancellationToken cancellationToken = default)
         {
+            if (path.IsRoot)
+            {
+                return await _dbContext.FileSystemItems.Where(x => x.FileSystemId == path.FileSystemId && !x.ParentId.HasValue).ToArrayAsync(cancellationToken);
+            }
+
             var item = await FindAsync(path, cancellationToken);
+            if (item == null)
+            {
+                return null;
+            }
+
             if (!item.IsDirectory)
             {
                 return null;
@@ -137,10 +158,10 @@ namespace Minio.FileSystem.Services
             return await _children(item, cancellationToken);
         }
 
-        public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output)
+        public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output, CancellationToken cancellationToken)
         {
             _tenantProvider.SetTenant(fileSystemItem.TenantId);
-            await _minioClient.GetObjectAsync(fileSystemItem, output);
+            await _minioClient.GetObjectAsync(fileSystemItem, output, cancellationToken);
             _tenantProvider.RestoreTenancy();
         }
 
@@ -344,9 +365,89 @@ namespace Minio.FileSystem.Services
             return sourceFileSystemItem;
         }
 
+        public async Task ZipToStreamAsync(FileSystemItemEntity fileSystemItem, Stream stream, CancellationToken cancellationToken = default)
+        {
+            await _zipAsync(new FileSystemItemEntity[] { fileSystemItem }, stream, cancellationToken);
+        }
+
+        public async Task<FileSystemItemEntity> CreateZipAsync(IEnumerable<Guid> ids, FileSystemPath path, CancellationToken cancellationToken = default)
+        {
+            var fileSystemItems = await GetManyAsync(ids, cancellationToken);
+            var fileSystemItem = await FindAsync(path, cancellationToken);
+
+            var localPath = Path.GetTempFileName();
+
+            try
+            {
+                using (var stream = File.OpenWrite(localPath))
+                {
+                    await _zipAsync(fileSystemItems, stream, cancellationToken);
+                }
+
+                using (var stream = File.OpenRead(localPath))
+                {
+                    if (fileSystemItem == null)
+                    {
+                        return await _addAsync(path, "application/zip", stream, cancellationToken);
+                    }
+
+                    return await _updateAsync(fileSystemItem, path, "application/zip", stream, cancellationToken);
+                }
+            }
+            catch { }
+            finally
+            {
+                if (File.Exists(localPath))
+                {
+                    File.Delete(localPath);
+                }
+            }
+
+            return null;
+        }
+
         #endregion
 
         #region Helpers
+
+        private async Task _zipAsync(IEnumerable<FileSystemItemEntity> fileSystemItems, Stream stream, CancellationToken cancellationToken = default)
+        {
+            using (var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create))
+            {
+                foreach (FileSystemItemEntity fileSystemItem in fileSystemItems)
+                {
+                    if (fileSystemItem.IsExternalLink)
+                    {
+                        continue;
+                    }
+
+                    FileSystemItemEntity[] items;
+                    if (fileSystemItem.IsDirectory)
+                    {
+                        items = await _allChildren(fileSystemItem, cancellationToken);
+                    }
+                    else
+                    {
+                        items = new FileSystemItemEntity[] { fileSystemItem };
+                    }
+
+                    foreach (var item in items)
+                    {
+                        if (item.IsDirectory)
+                        {
+                            continue;
+                        }
+
+                        var path = string.Join("/", item.VirtualPath.Split("/").Skip(2));
+                        var entry = zipArchive.CreateEntry(item.VirtualPath, CompressionLevel.Optimal);
+                        using (var entryStream = entry.Open())
+                        {
+                            await CopyToStreamAsync(item, entryStream, cancellationToken);
+                        }
+                    }
+                }
+            }
+        }
 
         private async Task<FileSystemItemEntity> _parent(FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
         {
@@ -393,26 +494,33 @@ namespace Minio.FileSystem.Services
                 return fileSystemItem;
             }
 
-            var parent = Directory.GetParent(path.VirtualPath).FullName;
-            var parentPath = FileSystemPath.FromString(parent, path.TenantId);
-
-            var parts = parentPath.VirtualPath.Split("/");
-            var tempPath = parts.FirstOrDefault();
+            var parts = path.VirtualPath.Split("/").Skip(1).ToArray();
+            var tempPath = $"/{parts.FirstOrDefault()}";
+            var parentPath = FileSystemPath.FromString(tempPath, path.TenantId);
+            var parent = await FindAsync(parentPath, cancellationToken);
             foreach (var part in parts.Skip(1))
             {
                 tempPath = $"{tempPath}/{part}";
+                var fileSystemPath = FileSystemPath.FromString(tempPath, path.TenantId);
+                fileSystemItem = await FindAsync(fileSystemPath, cancellationToken);
 
-                fileSystemItem = new FileSystemItemEntity()
+                if (fileSystemItem == null)
                 {
-                    FileSystemId = path.FileSystemId,
-                    FileSystemItemType = FileSystemItemType.Directory,
-                    Name = Path.GetFileName(tempPath),
-                    VirtualPath = tempPath,
-                    TenantId = path.TenantId
-                };
+                    fileSystemItem = new FileSystemItemEntity()
+                    {
+                        FileSystemId = path.FileSystemId,
+                        FileSystemItemType = FileSystemItemType.Directory,
+                        Name = Path.GetFileName(tempPath),
+                        VirtualPath = tempPath,
+                        TenantId = path.TenantId,
+                        ParentId = parent?.Id
+                    };
 
-                _dbContext.Add(fileSystemItem);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                    _dbContext.Add(fileSystemItem);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
+                parent = fileSystemItem;
             }
 
             return fileSystemItem;
@@ -420,12 +528,17 @@ namespace Minio.FileSystem.Services
 
         private async Task<FileSystemItemEntity> _addAsync(FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)
         {
+            return await _addAsync(path, file.ContentType, file.OpenReadStream(), cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity> _addAsync(FileSystemPath path, string contentType, Stream stream, CancellationToken cancellationToken = default)
+        {
             var parent = await _addDirectoryAsync(path, cancellationToken);
 
             var fileSystemItem = new FileSystemItemEntity()
             {
                 FileSystemId = path.FileSystemId,
-                ContentType = file.ContentType,
+                ContentType = contentType,
                 VirtualPath = path.VirtualPath,
                 Name = Path.GetFileName(path.VirtualPath),
                 FileSystemItemType = FileSystemItemType.File,
@@ -440,7 +553,7 @@ namespace Minio.FileSystem.Services
 
             using (var fileStream = File.OpenWrite(localPath))
             {
-                file.OpenReadStream().CopyTo(fileStream);
+                stream.CopyTo(fileStream);
                 fileStream.Close();
             }
 
@@ -475,7 +588,12 @@ namespace Minio.FileSystem.Services
 
         private async Task<FileSystemItemEntity> _updateAsync(FileSystemItemEntity fileSystemItem, FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)
         {
-            fileSystemItem.ContentType = file.ContentType;
+            return await _updateAsync(fileSystemItem, path, file.ContentType, file.OpenReadStream(), cancellationToken);
+        }
+
+        private async Task<FileSystemItemEntity> _updateAsync(FileSystemItemEntity fileSystemItem, FileSystemPath path, string contentType, Stream stream, CancellationToken cancellationToken = default)
+        {
+            fileSystemItem.ContentType = contentType;
             fileSystemItem.VirtualPath = path.VirtualPath;
             fileSystemItem.Name = Path.GetFileName(path.VirtualPath);
             fileSystemItem.FileSystemItemType = FileSystemItemType.File;
@@ -485,7 +603,7 @@ namespace Minio.FileSystem.Services
 
             using (var fileStream = File.OpenWrite(localPath))
             {
-                file.OpenReadStream().CopyTo(fileStream);
+                stream.CopyTo(fileStream);
                 fileStream.Close();
             }
 
@@ -634,7 +752,7 @@ namespace Minio.FileSystem.Services
 
             if (!s.StartsWith("/"))
             {
-                return new FileSystemPath() { IsValid = false };
+                s = $"/{s}";
             }
 
             var parts = s.Split("/");
@@ -643,14 +761,19 @@ namespace Minio.FileSystem.Services
                 return new FileSystemPath() { IsValid = false };
             }
 
-            if (!Guid.TryParse(parts[1], out var FileSystemId))
+            if (!Guid.TryParse(parts[1], out var fileSystemId))
             {
                 return new FileSystemPath() { IsValid = false };
             }
 
+            while (s.Contains("//"))
+            {
+                s = s.Replace("//", "/");
+            }
+
             return new FileSystemPath()
             {
-                FileSystemId = FileSystemId,
+                FileSystemId = fileSystemId,
                 VirtualPath = $"{s}",
                 TenantId = tenantId,
                 IsValid = true

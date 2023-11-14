@@ -18,6 +18,7 @@ namespace Minio.FileSystem.Backend
 
         public Guid? ParentId { get; set; }
         public FileSystemItemEntity Parent { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<FileSystemItemEntity> Children { get; set; }
 
         public string Name { get; set; }

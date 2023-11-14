@@ -165,6 +165,15 @@ namespace Minio.FileSystem.Client
         }
 
         /// <summary>
+        /// /filesystem/move
+        /// </summary>
+        public async Task<FileSystemItemEntity> CreateZipAsync(CreateZipModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/createZip", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
         /// /filesystem/createFileSystem
         /// </summary>
         public async Task<FileSystemEntity> CreateFileSystemAsync(CreateFileSystemModel model, CancellationToken cancellationToken = default)
