@@ -1,12 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Minio.FileSystem.Abstraction;
 using System;
 using System.Collections.Generic;
 
 namespace Minio.FileSystem.Backend
 {
     [Index(nameof(TenantId))]
-    public class FileSystemEntity
+    public class FileSystemEntity : IFileSystem
     {
         public Guid Id { get; set; }
         public string Name { get; set; }

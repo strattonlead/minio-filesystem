@@ -1,5 +1,5 @@
-﻿using Minio.FileSystem.Backend;
-using Minio.FileSystem.Client.Models;
+﻿using Minio.FileSystem.Abstraction;
+using Minio.FileSystem.Models;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Minio.FileSystem.Client
 {
-    public class FileSystemClient
+    public class FileSystemClient : IFileSystemClient
     {
         private readonly HttpClient _httpClient;
 
@@ -31,7 +31,7 @@ namespace Minio.FileSystem.Client
         /// <summary>
         /// /filesystem/index
         /// </summary>
-        public async Task<bool> TestAsync()
+        public async Task<bool> TestAsync(CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.GetAsync("/filesystem");
             return response.IsSuccessStatusCode;
@@ -40,7 +40,7 @@ namespace Minio.FileSystem.Client
         /// <summary>
         /// /filesystem/index
         /// </summary>
-        public async Task<bool> TestApiKeyAsync()
+        public async Task<bool> TestApiKeyAsync(CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.GetAsync("/filesystem/test");
             return response.IsSuccessStatusCode;
@@ -49,43 +49,43 @@ namespace Minio.FileSystem.Client
         /// <summary>
         /// /filesystem/get
         /// </summary>
-        public async Task<FileSystemItemEntity> GetAsync(GetModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> GetAsync(GetModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/get", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/getList
         /// </summary>
-        public async Task<FileSystemItemEntity[]> GetListAsync(GetListModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem[]> GetListAsync(GetListModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/getList", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem[]>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/filter
         /// </summary>
-        public async Task<FileSystemItemEntity[]> FilterAsync(FilterModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem[]> FilterAsync(FilterModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/filter", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem[]>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/filterFileSystems
         /// </summary>
-        public async Task<FileSystemEntity[]> FilterFileSystemsAsync(FilterModel model, CancellationToken cancellationToken = default)
+        public async Task<Models.FileSystem[]> FilterFileSystemsAsync(FilterModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/filterFileSystems", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<Models.FileSystem[]>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/upload
         /// </summary>
-        public async Task<FileSystemItemEntity> UploadAsync(UploadModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> UploadAsync(UploadModel model, CancellationToken cancellationToken = default)
         {
             using (var content = new MultipartFormDataContent())
             using (var streamContent = new StreamContent(model.Stream))
@@ -103,44 +103,44 @@ namespace Minio.FileSystem.Client
                 }
 
                 var response = await _httpClient.PostAsync("/filesystem/upload", content, cancellationToken);
-                return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+                return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
             }
         }
 
         /// <summary>
         /// /filesystem/getFileSystems
         /// </summary>
-        public async Task<FileSystemEntity[]> GetFileSystemsAsync(GetFileSystemsModel model, CancellationToken cancellationToken = default)
+        public async Task<Models.FileSystem[]> GetFileSystemsAsync(GetFileSystemsModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/getFileSystems", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemEntity[]>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<Models.FileSystem[]>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/getAllFileSystems
         /// </summary>
-        public async Task<FileSystemItemEntity> GetAllFileSystemsAsync(CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> GetAllFileSystemsAsync(CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.GetAsync("/filesystem/getAllFileSystems", cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/createDirectory
         /// </summary>
-        public async Task<FileSystemItemEntity> CreateDirectoryAsync(CreateDirectoryModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> CreateDirectoryAsync(CreateDirectoryModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/createDirectory", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/createLink
         /// </summary>
-        public async Task<FileSystemItemEntity> CreateLinkAsync(CreateLinkModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> CreateLinkAsync(CreateLinkModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/createLink", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
@@ -164,37 +164,37 @@ namespace Minio.FileSystem.Client
         /// <summary>
         /// /filesystem/move
         /// </summary>
-        public async Task<FileSystemItemEntity> MoveAsync(MoveModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> MoveAsync(MoveModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/move", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/move
         /// </summary>
-        public async Task<FileSystemItemEntity> CreateZipAsync(CreateZipModel model, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItem> CreateZipAsync(CreateZipModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/createZip", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemItemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<FileSystemItem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/createFileSystem
         /// </summary>
-        public async Task<FileSystemEntity> CreateFileSystemAsync(CreateFileSystemModel model, CancellationToken cancellationToken = default)
+        public async Task<Models.FileSystem> CreateFileSystemAsync(CreateFileSystemModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/createFileSystem", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<Models.FileSystem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>
         /// /filesystem/renameFileSystem
         /// </summary>
-        public async Task<FileSystemEntity> RenameFileSystemAsync(RenameFileSystemModel model, CancellationToken cancellationToken = default)
+        public async Task<Models.FileSystem> RenameFileSystemAsync(RenameFileSystemModel model, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PostAsJsonAsync("/filesystem/renameFileSystem", model, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<FileSystemEntity>((JsonSerializerOptions)null, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<Models.FileSystem>((JsonSerializerOptions)null, cancellationToken);
         }
 
         /// <summary>

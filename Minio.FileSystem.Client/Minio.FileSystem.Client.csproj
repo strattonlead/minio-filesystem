@@ -5,8 +5,8 @@
 	  <ImplicitUsings>disable</ImplicitUsings>
 	  <Nullable>disable</Nullable>
 	  <PackageId>CreateIf.Minio.FileSystem.Client</PackageId>
-	  <Version>1.0.8</Version>
-	  <PackageVersion>1.0.8</PackageVersion>
+	  <Version>1.0.9</Version>
+	  <PackageVersion>1.0.9</PackageVersion>
 	  <Authors>Arndt Bieberstein</Authors>
 	  <Company>createIF Labs GmbH</Company>
 	  <EnablePackageValidation>true</EnablePackageValidation>
@@ -39,7 +39,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Minio.FileSystem.Backend\Minio.FileSystem.Backend.csproj" />
+	  <ProjectReference Include="..\Minio.FileSystem.Abstraction\Minio.FileSystem.Abstraction.csproj" />
 	</ItemGroup>
 
 </Project>

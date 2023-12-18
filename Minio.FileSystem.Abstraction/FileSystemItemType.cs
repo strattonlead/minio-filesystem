@@ -1,4 +1,4 @@
-﻿namespace Minio.FileSystem.Backend
+﻿namespace Minio.FileSystem.Abstraction
 {
     public enum FileSystemItemType
     {

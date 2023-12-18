@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Minio.FileSystem.Abstraction;
 using Minio.FileSystem.Backend;
 using Muffin.Tenancy.Services.Abstraction;
 using System;
@@ -412,7 +413,7 @@ namespace Minio.FileSystem.Services
 
         private async Task _zipAsync(IEnumerable<FileSystemItemEntity> fileSystemItems, Stream stream, CancellationToken cancellationToken = default)
         {
-            using (var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create))
+            using (var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create, true))
             {
                 foreach (FileSystemItemEntity fileSystemItem in fileSystemItems)
                 {
@@ -439,7 +440,7 @@ namespace Minio.FileSystem.Services
                         }
 
                         var path = string.Join("/", item.VirtualPath.Split("/").Skip(2));
-                        var entry = zipArchive.CreateEntry(item.VirtualPath, CompressionLevel.Optimal);
+                        var entry = zipArchive.CreateEntry(path, CompressionLevel.Optimal);
                         using (var entryStream = entry.Open())
                         {
                             await CopyToStreamAsync(item, entryStream, cancellationToken);

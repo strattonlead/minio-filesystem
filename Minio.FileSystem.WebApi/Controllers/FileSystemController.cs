@@ -173,7 +173,7 @@ namespace Minio.FileSystem.WebApi.Controllers
             return await _fileSystemService.CreateZipAsync(ids, path, _cancellationToken);
         }
 
-        [HttpPost, ApiKey, Route("/filesystem/download")]
+        [HttpGet, ApiKey, Route("/filesystem/download")]
         public async Task<IActionResult> DownloadAsync([FromQuery] Guid id)
         {
             var fileSystemItem = await _fileSystemService.GetAsync(id, _cancellationToken);
@@ -193,8 +193,7 @@ namespace Minio.FileSystem.WebApi.Controllers
                 using (var mem = new MemoryStream())
                 {
                     await _fileSystemService.ZipToStreamAsync(fileSystemItem, mem, _cancellationToken);
-                    mem.Seek(0, SeekOrigin.Begin);
-                    return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);
+                    return File(mem.ToArray(), "application/zip", $"{fileSystemItem.Name}.zip");
                 }
             }
 
@@ -221,9 +220,7 @@ namespace Minio.FileSystem.WebApi.Controllers
             using (var mem = new MemoryStream())
             {
                 await _fileSystemService.CopyToStreamAsync(fileSystemItem, mem, _cancellationToken);
-                mem.Seek(0, SeekOrigin.Begin);
-
-                return File(mem, fileSystemItem.ContentType, fileSystemItem.Name);
+                return File(mem.ToArray(), fileSystemItem.ContentType, fileSystemItem.Name);
             }
         }
 

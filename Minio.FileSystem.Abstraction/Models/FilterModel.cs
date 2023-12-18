@@ -1,4 +1,4 @@
-﻿namespace Minio.FileSystem.Client.Models
+﻿namespace Minio.FileSystem.Models
 {
     public class FilterModel
     {

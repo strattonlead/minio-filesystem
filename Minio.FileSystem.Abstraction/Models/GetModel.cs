@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Minio.FileSystem.Client.Models
+namespace Minio.FileSystem.Models
 {
-    public class DeleteModel
+    public class GetModel
     {
         public Guid? Id { get; set; }
         public long? TenantId { get; set; }

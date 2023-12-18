@@ -19,7 +19,7 @@ builder.Services.AddFileSystemService();
 builder.Services.AddTenantProvider();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(Environment.GetEnvironmentVariable("MSSQL_CONNECTION_STRING") ?? "Server=localhost\\sqlexpress;Database=Minio.FileSystem.Local;Trusted_Connection=True;MultipleActiveResultSets=true");
+    options.UseNpgsql(Environment.GetEnvironmentVariable("NPGSQL_CONNECTION_STRING"));
 });
 
 var applicationName = Environment.GetEnvironmentVariable("APPLICATION_NAME");
@@ -28,7 +28,7 @@ if (useDataProtection)
 {
     builder.Services.AddDbContext<DataProtectionDbContext>(options =>
     {
-        options.UseSqlServer(Environment.GetEnvironmentVariable("DATA_PROTECTION_CONNECTION_STRING"));
+        options.UseNpgsql(Environment.GetEnvironmentVariable("DATA_PROTECTION_CONNECTION_STRING"));
     });
 
     builder.Services.AddDataProtection()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Minio.FileSystem.Abstraction;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace Minio.FileSystem.Backend
 {
     [Index(nameof(TenantId))]
     [Index(nameof(VirtualPath))]
-    public class FileSystemItemEntity
+    public class FileSystemItemEntity : IFileSystemItem
     {
         public Guid Id { get; set; }
         public Guid FileSystemId { get; set; }

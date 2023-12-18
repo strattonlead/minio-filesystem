@@ -4,7 +4,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>disable</Nullable>
-		<PackageId>CreateIf.Minio.FileSystem.Backend</PackageId>
+		<PackageId>CreateIf.Minio.FileSystem.Abstraction</PackageId>
 		<Version>1.0.9</Version>
 		<PackageVersion>1.0.9</PackageVersion>
 		<Authors>Arndt Bieberstein</Authors>
@@ -14,7 +14,7 @@
 		<NoWarn>$(NoWarn);CS1591</NoWarn>
 		<PackageTags>Minio</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Description>Backend classes for the Minio filesystem Server</Description>
+		<Description>Interfaces classes for the Minio filesystem Server</Description>
 		<PackageProjectUrl>https://github.com/strattonlead/minio-filesystem</PackageProjectUrl>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<PrivateRepositoryUrl>https://github.com/strattonlead/minio-filesystem.git</PrivateRepositoryUrl>
@@ -26,23 +26,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.24" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.24" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.22" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="icon.png" Pack="true" PackagePath="" />
 		<None Include="README.md" Pack="true" PackagePath="" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\Minio.FileSystem.Abstraction\Minio.FileSystem.Abstraction.csproj" />
 	</ItemGroup>
 
 </Project>
