@@ -1,4 +1,5 @@
 ﻿using Minio.FileSystem.Abstraction;
+using Minio.FileSystem.Client.Util;
 using Minio.FileSystem.Models;
 using System;
 using System.IO;
@@ -87,8 +88,21 @@ namespace Minio.FileSystem.Client
         /// </summary>
         public async Task<FileSystemItem> UploadAsync(UploadModel model, CancellationToken cancellationToken = default)
         {
+            return await UploadAsync(model, null, cancellationToken);
+        }
+
+        /// <summary>
+        /// /filesystem/upload
+        /// </summary>
+        public async Task<FileSystemItem> UploadAsync(UploadModel model, EventHandler<UploadProgress> uploadProgressChanged, CancellationToken cancellationToken = default)
+        {
+            var progress = new Progress<UploadProgress>();
+            if (uploadProgressChanged != null)
+            {
+                progress.ProgressChanged += (e, p) => { uploadProgressChanged?.Invoke(this, p); };
+            }
             using (var content = new MultipartFormDataContent())
-            using (var streamContent = new StreamContent(model.Stream))
+            using (var streamContent = new ProgressableStreamContent(model.Stream, 4096, progress))
             {
                 content.Add(streamContent, "file", model.Name);
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(model.ContentType);
