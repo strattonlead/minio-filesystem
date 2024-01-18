@@ -51,6 +51,7 @@ jobs:
       uses: actions/setup-dotnet@v3
 
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
+    - run: dotnet pack Minio.FileSystem.Abstraction --configuration Release --output ${{ env.NuGetDirectory }}
     - run: dotnet pack Minio.FileSystem.Backend --configuration Release --output ${{ env.NuGetDirectory }}
     - run: dotnet pack Minio.FileSystem.Client --configuration Release --output ${{ env.NuGetDirectory }}
 
