@@ -142,7 +142,7 @@ namespace Minio.FileSystem.Client.Util
             {
                 while (true)
                 {
-                    var length = this.streamToWrite.Read(buffer, 0, buffer.Length);
+                    var length = await this.streamToWrite.ReadAsync(buffer, 0, buffer.Length);
                     if (length <= 0)
                     {
                         break;
