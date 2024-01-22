@@ -57,6 +57,15 @@ namespace Minio.FileSystem.Client
         }
 
         /// <summary>
+        /// /filesystem/getThumbnail
+        /// </summary>
+        public async Task<Thumbnail> GetAsync(GetThumbnailModel model, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.PostAsJsonAsync("/filesystem/getThumbnail", model, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<Thumbnail>((JsonSerializerOptions)null, cancellationToken);
+        }
+
+        /// <summary>
         /// /filesystem/getList
         /// </summary>
         public async Task<FileSystemItem[]> GetListAsync(GetListModel model, CancellationToken cancellationToken = default)

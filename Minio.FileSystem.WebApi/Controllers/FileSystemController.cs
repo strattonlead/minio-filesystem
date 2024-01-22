@@ -58,6 +58,12 @@ namespace Minio.FileSystem.WebApi.Controllers
             return await _fileSystemService.FindAsync(path, _cancellationToken);
         }
 
+        [HttpPost, ApiKey, Route("/filesystem/getThumbnail")]
+        public async Task<ThumbnailEntity> GetThumbnailAsync([FromBody] GetThumbnailModel model)
+        {
+            return await _fileSystemService.GetThumbnailAsync(model.Id, _cancellationToken);
+        }
+
         [HttpPost, ApiKey, Route("/filesystem/getList")]
         public async Task<FileSystemItemEntity[]> ListAsync([FromBody] GetListModel model)
         {
