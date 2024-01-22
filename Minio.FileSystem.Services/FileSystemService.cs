@@ -159,11 +159,20 @@ namespace Minio.FileSystem.Services
             return await _children(item, cancellationToken);
         }
 
-        public async Task CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output, CancellationToken cancellationToken)
+        public async Task<bool> CopyToStreamAsync(FileSystemItemEntity fileSystemItem, Stream output, CancellationToken cancellationToken)
         {
             _tenantProvider.SetTenant(fileSystemItem.TenantId);
-            await _minioClient.GetObjectAsync(fileSystemItem, output, cancellationToken);
-            _tenantProvider.RestoreTenancy();
+            try
+            {
+                await _minioClient.GetObjectAsync(fileSystemItem, output, cancellationToken);
+                return true;
+            }
+            catch { }
+            finally
+            {
+                _tenantProvider.RestoreTenancy();
+            }
+            return false;
         }
 
         public async Task<FileSystemItemEntity> UploadAsync(FileSystemPath path, IFormFile file, CancellationToken cancellationToken = default)

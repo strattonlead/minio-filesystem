@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Minio.FileSystem.Abstraction;
 using Minio.FileSystem.Backend;
-using Muffin.Tenancy.Services.Abstraction;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -23,7 +22,6 @@ namespace Minio.FileSystem.Services
         #region Properties
 
         private readonly ILogger _logger;
-        private readonly ITenantProvider _tenantProvider;
         private readonly ApplicationDbContext _dbContext;
         private readonly FileSystemService _fileSystemService;
         private readonly IMinioClient _minioClient;
@@ -37,7 +35,6 @@ namespace Minio.FileSystem.Services
         public ThumbnailService(IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<ILogger<ThumbnailService>>();
-            _tenantProvider = serviceProvider.GetRequiredService<ITenantProvider>();
             _dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
             _fileSystemService = serviceProvider.GetRequiredService<FileSystemService>();
             _minioClient = serviceProvider.GetRequiredService<IMinioClient>();
@@ -53,7 +50,7 @@ namespace Minio.FileSystem.Services
             FileSystemItemEntity[] fileSystemItems;
             do
             {
-                fileSystemItems = await _dbContext.FileSystemItems.Where(x => !x.ThumbnailsProcessed).Take(10).ToArrayAsync(cancellationToken);
+                fileSystemItems = await _dbContext.FileSystemItems.Where(x => x.FileSystemItemType == FileSystemItemType.File && !x.ThumbnailsProcessed).Take(10).ToArrayAsync(cancellationToken);
                 foreach (var fileSystemItem in fileSystemItems)
                 {
                     var thumbnails = await CreateThumbnailsAsync(fileSystemItem, cancellationToken);
@@ -65,6 +62,11 @@ namespace Minio.FileSystem.Services
                         count += thumbnails.Length;
                     }
                     await _dbContext.SaveChangesAsync(cancellationToken);
+
+                    foreach (var thumbnail in thumbnails)
+                    {
+                        await _processUploadAsync(thumbnail, thumbnail.Data, cancellationToken);
+                    }
                 }
             } while (fileSystemItems.Any() && !cancellationToken.IsCancellationRequested);
             return count;
@@ -85,7 +87,11 @@ namespace Minio.FileSystem.Services
             if (fileSystemItem.ContentType.StartsWith("image/"))
             {
                 var thumbnail = await _createImageThumbnailAsync(fileSystemItem, width, height, cancellationToken);
-                return new ThumbnailEntity[] { thumbnail };
+                if (thumbnail != null)
+                {
+                    return new ThumbnailEntity[] { thumbnail };
+                }
+                return new ThumbnailEntity[0];
             }
             else if (fileSystemItem.ContentType.StartsWith("video/"))
             {
@@ -188,7 +194,11 @@ namespace Minio.FileSystem.Services
 
             using (var stream = new MemoryStream())
             {
-                await _fileSystemService.CopyToStreamAsync(fileSystemItem, stream, cancellationToken);
+                var success = await _fileSystemService.CopyToStreamAsync(fileSystemItem, stream, cancellationToken);
+                if (!success)
+                {
+                    return null;
+                }
                 stream.Seek(0, SeekOrigin.Begin);
                 using (var image = Image.FromStream(stream))
                 {
@@ -240,10 +250,11 @@ namespace Minio.FileSystem.Services
                                 ContentType = "image/png",
                                 ThumbnailType = ThumbnailType.Image,
                                 SizeInBytes = output.Length,
-                                TenantId = fileSystemItem.TenantId
+                                TenantId = fileSystemItem.TenantId,
+                                Data = output.ToArray()
                             };
 
-                            await _processUploadAsync(thumbnail, output, cancellationToken);
+                            //await _processUploadAsync(thumbnail, output, cancellationToken);
                             return thumbnail;
                         }
                     }
@@ -273,15 +284,16 @@ namespace Minio.FileSystem.Services
                     ContentType = "image/png",
                     ThumbnailType = ThumbnailType.Image,
                     SizeInBytes = bytes.Length,
-                    TenantId = fileSystemItem.TenantId
+                    TenantId = fileSystemItem.TenantId,
+                    Data = bytes
                 };
 
-                using (var mem = new MemoryStream())
-                {
-                    mem.Write(bytes);
-                    mem.Seek(0, SeekOrigin.Begin);
-                    await _processUploadAsync(thumbnail, mem, cancellationToken);
-                }
+                //using (var mem = new MemoryStream())
+                //{
+                //    mem.Write(bytes);
+                //    mem.Seek(0, SeekOrigin.Begin);
+                //    await _processUploadAsync(thumbnail, mem, cancellationToken);
+                //}
                 result.Add(thumbnail);
             }
 
@@ -316,10 +328,11 @@ namespace Minio.FileSystem.Services
                         ContentType = "image/gif",
                         ThumbnailType = ThumbnailType.Gif,
                         SizeInBytes = stream.Length,
-                        TenantId = fileSystemItem.TenantId
+                        TenantId = fileSystemItem.TenantId,
+                        Data = stream.ToArray()
                     };
 
-                    await _processUploadAsync(thumbnail, stream, cancellationToken);
+                    //await _processUploadAsync(thumbnail, stream, cancellationToken);
                     result.Add(thumbnail);
                 }
             }
@@ -436,11 +449,19 @@ namespace Minio.FileSystem.Services
 
         #region Util
 
+        private async Task _processUploadAsync(ThumbnailEntity thumbnail, byte[] data, CancellationToken cancellationToken = default)
+        {
+            using (var stream = new MemoryStream())
+            {
+                stream.Write(data);
+                stream.Seek(0, SeekOrigin.Begin);
+                await _processUploadAsync(thumbnail, stream, cancellationToken);
+            }
+        }
+
         private async Task _processUploadAsync(ThumbnailEntity thumbnail, Stream stream, CancellationToken cancellationToken = default)
         {
-            _tenantProvider.SetTenant(thumbnail.TenantId);
             await _minioClient.PutObjectAsync(thumbnail, stream, true, cancellationToken);
-            _tenantProvider.RestoreTenancy();
         }
 
         #endregion

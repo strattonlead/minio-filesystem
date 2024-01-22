@@ -11,6 +11,7 @@ namespace Minio.FileSystem.Backend
     {
         public Guid Id { get; set; }
         public Guid FileSystemItemId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
         public FileSystemItemEntity FileSystemItem { get; set; }
         public ThumbnailType ThumbnailType { get; set; }
         public int Width { get; set; }
@@ -21,6 +22,9 @@ namespace Minio.FileSystem.Backend
 
         [NotMapped]
         public string StoragePath => ThumbnailType == ThumbnailType.Image ? $"{Id}.thumb.png" : $"{Id}.thumb.gif";
+
+        [NotMapped]
+        public byte[] Data { get; set; }
     }
 
     public class ThumbnailEntityTypeConfiguration : IEntityTypeConfiguration<ThumbnailEntity>
