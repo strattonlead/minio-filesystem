@@ -71,7 +71,7 @@ namespace Minio.FileSystem.Services
 
         public static string BucketName(this IMinioClient minio) => ((MinioClientWithTenancy)minio).BucketName;
 
-        public static async Task PutObjectAsync(this IMinioClient minio, FileSystemItemEntity FileSystemItem, Stream stream, bool @override, CancellationToken cancellationToken = default)
+        public static async Task PutObjectAsync(this IMinioClient minio, FileSystemItemEntity fileSystemItem, Stream stream, bool @override, CancellationToken cancellationToken = default)
         {
             var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
             if (!ready)
@@ -79,19 +79,19 @@ namespace Minio.FileSystem.Services
                 throw new InvalidOperationException("IMinioClient is not ready. probably tenant missing");
             }
 
-            if (@override || !await minio.ObjectExistsAsync(FileSystemItem))
+            if (@override || !await minio.ObjectExistsAsync(fileSystemItem))
             {
                 var putObjectArgs = new PutObjectArgs()
                     .WithBucket(minio.BucketName())
-                    .WithObject(FileSystemItem.StoragePath)
+                    .WithObject(fileSystemItem.StoragePath)
                     .WithObjectSize(stream.Length)
                     .WithStreamData(stream)
-                    .WithContentType(FileSystemItem.ContentType);
+                    .WithContentType(fileSystemItem.ContentType);
                 await minio.PutObjectAsync(putObjectArgs, cancellationToken).ConfigureAwait(false);
             }
         }
 
-        public static async Task PutObjectAsync(this IMinioClient minio, FileSystemItemEntity FileSystemItem, string filePath, bool @override, CancellationToken cancellationToken = default)
+        public static async Task PutObjectAsync(this IMinioClient minio, ThumbnailEntity thumbnail, Stream stream, bool @override, CancellationToken cancellationToken = default)
         {
             var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
             if (!ready)
@@ -99,13 +99,33 @@ namespace Minio.FileSystem.Services
                 throw new InvalidOperationException("IMinioClient is not ready. probably tenant missing");
             }
 
-            if (@override || !await minio.ObjectExistsAsync(FileSystemItem))
+            if (@override || !await minio.ObjectExistsAsync(thumbnail))
             {
                 var putObjectArgs = new PutObjectArgs()
                     .WithBucket(minio.BucketName())
-                    .WithObject(FileSystemItem.StoragePath)
+                    .WithObject(thumbnail.StoragePath)
+                    .WithObjectSize(stream.Length)
+                    .WithStreamData(stream)
+                    .WithContentType(thumbnail.ContentType);
+                await minio.PutObjectAsync(putObjectArgs, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        public static async Task PutObjectAsync(this IMinioClient minio, FileSystemItemEntity fileSystemItem, string filePath, bool @override, CancellationToken cancellationToken = default)
+        {
+            var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
+            if (!ready)
+            {
+                throw new InvalidOperationException("IMinioClient is not ready. probably tenant missing");
+            }
+
+            if (@override || !await minio.ObjectExistsAsync(fileSystemItem))
+            {
+                var putObjectArgs = new PutObjectArgs()
+                    .WithBucket(minio.BucketName())
+                    .WithObject(fileSystemItem.StoragePath)
                     .WithFileName($"{filePath}")
-                    .WithContentType(FileSystemItem.ContentType);
+                    .WithContentType(fileSystemItem.ContentType);
                 await minio.PutObjectAsync(putObjectArgs, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -160,7 +180,7 @@ namespace Minio.FileSystem.Services
             await minio.RemoveObjectAsync(removeObjectArgs, cancellationToken).ConfigureAwait(false);
         }
 
-        public static async Task<bool> ObjectExistsAsync(this IMinioClient minio, FileSystemItemEntity FileSystemItem, CancellationToken cancellationToken = default)
+        public static async Task<bool> ObjectExistsAsync(this IMinioClient minio, FileSystemItemEntity fileSystemItem, CancellationToken cancellationToken = default)
         {
             var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
             if (!ready)
@@ -170,7 +190,33 @@ namespace Minio.FileSystem.Services
 
             var getObjectArgs = new GetObjectArgs()
                 .WithBucket(minio.BucketName())
-                .WithObject(FileSystemItem.StoragePath)
+                .WithObject(fileSystemItem.StoragePath)
+                .WithCallbackStream(x => { });
+
+            try
+            {
+                await minio.GetObjectAsync(getObjectArgs, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ObjectNotFoundException) { return false; }
+            catch (Exception e)
+            {
+                throw new Exception("Error in ObjectExistsAsync", e);
+            }
+
+            return true;
+        }
+
+        public static async Task<bool> ObjectExistsAsync(this IMinioClient minio, ThumbnailEntity thumbnail, CancellationToken cancellationToken = default)
+        {
+            var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
+            if (!ready)
+            {
+                throw new InvalidOperationException("IMinioClient is not ready. probably tenant missing");
+            }
+
+            var getObjectArgs = new GetObjectArgs()
+                .WithBucket(minio.BucketName())
+                .WithObject(thumbnail.StoragePath)
                 .WithCallbackStream(x => { });
 
             try

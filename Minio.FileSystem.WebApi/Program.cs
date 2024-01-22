@@ -19,7 +19,7 @@ builder.Services.AddFileSystemService();
 builder.Services.AddTenantProvider();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(Environment.GetEnvironmentVariable("NPGSQL_CONNECTION_STRING"));
+    options.UseNpgsql(Environment.GetEnvironmentVariable("NPGSQL_CONNECTION_STRING") ?? "fill me");
 });
 
 var applicationName = Environment.GetEnvironmentVariable("APPLICATION_NAME");
@@ -41,6 +41,8 @@ builder.Services.AddFileCacheService();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddDbMigratorBackgroundService();
 builder.Services.AddFileCacheBackgroundService();
+builder.Services.AddScoped<ThumbnailService>();
+builder.Services.AddHostedService<ThumbnailBackgroundService>();
 builder.Services.AddSingleton<ApiKeyAuthorizationFilter>();
 builder.Services.AddSingleton<IApiKeyValidator, ApiKeyValidator>();
 builder.Services.AddEndpointsApiExplorer();

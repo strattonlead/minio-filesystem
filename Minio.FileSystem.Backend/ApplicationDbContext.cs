@@ -17,5 +17,6 @@ namespace Minio.FileSystem.Backend
 
         public DbSet<FileSystemEntity> FileSystems { get; set; }
         public DbSet<FileSystemItemEntity> FileSystemItems { get; set; }
+        public DbSet<ThumbnailEntity> Thumbnails { get; set; }
     }
 }

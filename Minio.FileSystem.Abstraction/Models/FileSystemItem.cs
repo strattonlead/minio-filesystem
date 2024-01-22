@@ -36,5 +36,7 @@ namespace Minio.FileSystem.Models
 
         [NotMapped]
         public bool IsExternalLink => FileSystemItemType == FileSystemItemType.ExternalLink;
+
+        public List<Thumbnail> Thumbnails { get; set; }
     }
 }

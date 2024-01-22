@@ -121,7 +121,7 @@ namespace Minio.FileSystem.Services
 
         public async Task<FileSystemItemEntity[]> GetManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
         {
-            return await _dbContext.FileSystemItems.Where(x => ids.Contains(x.Id)).ToArrayAsync(cancellationToken);
+            return await _dbContext.FileSystemItems.Where(x => ids.Contains(x.Id)).AsSplitQuery().ToArrayAsync(cancellationToken);
         }
 
         public async Task<Guid[]> GetIdsAsync(IEnumerable<string> virtualPaths, long? tenantId, CancellationToken cancellationToken = default)
@@ -143,7 +143,7 @@ namespace Minio.FileSystem.Services
         {
             if (path.IsRoot)
             {
-                return await _dbContext.FileSystemItems.Where(x => x.FileSystemId == path.FileSystemId && !x.ParentId.HasValue).ToArrayAsync(cancellationToken);
+                return await _dbContext.FileSystemItems.Where(x => x.FileSystemId == path.FileSystemId && !x.ParentId.HasValue).AsSplitQuery().ToArrayAsync(cancellationToken);
             }
 
             var item = await FindAsync(path, cancellationToken);
@@ -196,10 +196,10 @@ namespace Minio.FileSystem.Services
         {
             if (path.IsRoot)
             {
-                return await _dbContext.FileSystemItems.Where(x => x.FileSystemId == path.FileSystemId).SumAsync(x => x.SizeInBytes) ?? 0;
+                return await _dbContext.FileSystemItems.Where(x => x.FileSystemId == path.FileSystemId).IgnoreAutoIncludes().SumAsync(x => x.SizeInBytes) ?? 0;
             }
 
-            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.Contains(path.VirtualPath)).SumAsync(x => x.SizeInBytes) ?? 0;
+            return await _dbContext.FileSystemItems.Where(x => x.VirtualPath.Contains(path.VirtualPath)).IgnoreAutoIncludes().SumAsync(x => x.SizeInBytes) ?? 0;
         }
 
         public async Task<FileSystemItemEntity> CreateLinkAsync(FileSystemPath path, string url, CancellationToken cancellationToken = default)

@@ -28,6 +28,7 @@ namespace Minio.FileSystem.Backend
         public string ExternalUrl { get; set; }
         public string VirtualPath { get; set; }
         public long? TenantId { get; set; }
+        public bool ThumbnailsProcessed { get; set; }
 
         public FileSystemItemType FileSystemItemType { get; set; }
         public Dictionary<string, object> MetaProperties { get; set; }
@@ -43,6 +44,8 @@ namespace Minio.FileSystem.Backend
 
         [NotMapped]
         public bool IsExternalLink => FileSystemItemType == FileSystemItemType.ExternalLink;
+
+        public List<ThumbnailEntity> Thumbnails { get; set; }
     }
 
     public class FileSystemItemEntityTypeConfiguration : IEntityTypeConfiguration<FileSystemItemEntity>
@@ -56,8 +59,15 @@ namespace Minio.FileSystem.Backend
                 .HasForeignKey(x => x.ParentId)
                 .OnDelete(DeleteBehavior.ClientCascade);
 
+            builder.HasMany(x => x.Thumbnails)
+                .WithOne(x => x.FileSystemItem)
+                .HasForeignKey(x => x.FileSystemItemId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
             builder.Property(x => x.MetaProperties)
                 .HasConversion(x => JsonConvert.SerializeObject(x), x => !string.IsNullOrWhiteSpace(x) ? JsonConvert.DeserializeObject<Dictionary<string, object>>(x) : null);
+
+            builder.Navigation(x => x.Thumbnails).AutoInclude();
         }
     }
 }
