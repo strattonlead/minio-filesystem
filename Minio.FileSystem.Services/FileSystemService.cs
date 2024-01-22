@@ -119,6 +119,11 @@ namespace Minio.FileSystem.Services
             return await _dbContext.FileSystemItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public async Task<ThumbnailEntity> GetThumbnailAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Thumbnails.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
         public async Task<FileSystemItemEntity[]> GetManyAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
         {
             return await _dbContext.FileSystemItems.Where(x => ids.Contains(x.Id)).AsSplitQuery().ToArrayAsync(cancellationToken);
@@ -165,6 +170,22 @@ namespace Minio.FileSystem.Services
             try
             {
                 await _minioClient.GetObjectAsync(fileSystemItem, output, cancellationToken);
+                return true;
+            }
+            catch { }
+            finally
+            {
+                _tenantProvider.RestoreTenancy();
+            }
+            return false;
+        }
+
+        public async Task<bool> CopyToStreamAsync(ThumbnailEntity thumbnail, Stream output, CancellationToken cancellationToken)
+        {
+            _tenantProvider.SetTenant(thumbnail.TenantId);
+            try
+            {
+                await _minioClient.GetObjectAsync(thumbnail, output, cancellationToken);
                 return true;
             }
             catch { }

@@ -14,15 +14,21 @@ namespace Minio.FileSystem.Services
             }
         }
 
-        public bool IsCached(FileSystemItemEntity FileSystemItem)
+        public bool IsCached(FileSystemItemEntity fileSystemItem)
         {
-            var path = Path.Combine("cache", FileSystemItem.StoragePath);
+            var path = Path.Combine("cache", fileSystemItem.StoragePath);
             return File.Exists(path);
         }
 
-        public Stream OpenReadStream(FileSystemItemEntity FileSystemItem)
+        public bool IsCached(ThumbnailEntity thumbnail)
         {
-            var path = Path.Combine("cache", FileSystemItem.StoragePath);
+            var path = Path.Combine("cache", thumbnail.StoragePath);
+            return File.Exists(path);
+        }
+
+        public Stream OpenReadStream(FileSystemItemEntity fileSystemItem)
+        {
+            var path = Path.Combine("cache", fileSystemItem.StoragePath);
             if (File.Exists(path))
             {
                 return File.OpenRead(path);
@@ -30,9 +36,19 @@ namespace Minio.FileSystem.Services
             return null;
         }
 
-        public void Cache(FileSystemItemEntity FileSystemItem, Stream stream)
+        public Stream OpenReadStream(ThumbnailEntity thumbnail)
         {
-            var path = Path.Combine("cache", FileSystemItem.StoragePath);
+            var path = Path.Combine("cache", thumbnail.StoragePath);
+            if (File.Exists(path))
+            {
+                return File.OpenRead(path);
+            }
+            return null;
+        }
+
+        public void Cache(FileSystemItemEntity fileSystemItem, Stream stream)
+        {
+            var path = Path.Combine("cache", fileSystemItem.StoragePath);
             if (File.Exists(path))
             {
                 return;
@@ -44,9 +60,34 @@ namespace Minio.FileSystem.Services
             }
         }
 
-        public Stream OpenWriteStream(FileSystemItemEntity FileSystemItem)
+        public void Cache(ThumbnailEntity thumbnail, Stream stream)
         {
-            var path = Path.Combine("cache", FileSystemItem.StoragePath);
+            var path = Path.Combine("cache", thumbnail.StoragePath);
+            if (File.Exists(path))
+            {
+                return;
+            }
+
+            using (var file = File.OpenWrite(path))
+            {
+                stream.CopyTo(file);
+            }
+        }
+
+        public Stream OpenWriteStream(FileSystemItemEntity fileSystemItem)
+        {
+            var path = Path.Combine("cache", fileSystemItem.StoragePath);
+            if (File.Exists(path))
+            {
+                return null;
+            }
+
+            return File.OpenWrite(path);
+        }
+
+        public Stream OpenWriteStream(ThumbnailEntity thumbnail)
+        {
+            var path = Path.Combine("cache", thumbnail.StoragePath);
             if (File.Exists(path))
             {
                 return null;

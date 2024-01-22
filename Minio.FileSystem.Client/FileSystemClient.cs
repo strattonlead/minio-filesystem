@@ -229,6 +229,15 @@ namespace Minio.FileSystem.Client
             return await response.Content.ReadAsStreamAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// /filesystem/thumb?id={id}
+        /// </summary>
+        public async Task<Stream> DownloadThumbnailAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var response = await _httpClient.GetAsync($"/filesystem/thumb?id={id}", cancellationToken);
+            return await response.Content.ReadAsStreamAsync(cancellationToken);
+        }
+
         #endregion
     }
 

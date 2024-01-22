@@ -219,7 +219,42 @@ namespace Minio.FileSystem.Services
             {
                 minioWithTenancy._tenantProvider.RestoreTenancy();
             }
+            return false;
+        }
 
+        public static async Task<bool> GetObjectAsync(this IMinioClient minio, ThumbnailEntity thumbnail, Stream outputStream, CancellationToken cancellationToken = default)
+        {
+            var minioWithTenancy = (MinioClientWithTenancy)minio;
+            try
+            {
+                minioWithTenancy._tenantProvider.SetTenant(thumbnail.TenantId);
+
+                var ready = await ((MinioClientWithTenancy)minio).EnsureReady();
+                if (!ready)
+                {
+                    throw new InvalidOperationException("IMinioClient is not ready. probably tenant missing");
+                }
+
+                var getObjectArgs = new GetObjectArgs()
+                    .WithBucket(minio.BucketName())
+                    .WithObject(thumbnail.StoragePath)
+                    .WithCallbackStream(async (stream, ct) =>
+                    {
+                        await stream.CopyToAsync(outputStream, ct);
+                    });
+
+                await minio.GetObjectAsync(getObjectArgs, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            catch (Exception e)
+            {
+                minioWithTenancy._tenantProvider.RestoreTenancy();
+                throw new Exception("Error in GetObjectAsync", e);
+            }
+            finally
+            {
+                minioWithTenancy._tenantProvider.RestoreTenancy();
+            }
             return false;
         }
 

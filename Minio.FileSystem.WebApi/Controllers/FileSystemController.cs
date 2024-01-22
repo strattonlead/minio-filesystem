@@ -224,10 +224,51 @@ namespace Minio.FileSystem.WebApi.Controllers
             }
         }
 
+        [HttpGet, ApiKey, Route("/filesystem/thumb")]
+        public async Task<IActionResult> DownloadThumbnailAsync([FromQuery] Guid id)
+        {
+            var thumbnail = await _fileSystemService.GetThumbnailAsync(id, _cancellationToken);
+            if (thumbnail == null)
+            {
+                return NotFound();
+            }
+
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
+
+            if (_options.FileCacheEnabled)
+            {
+                if (_cache.IsCached(thumbnail))
+                {
+                    var readStream = _cache.OpenReadStream(thumbnail);
+                    return File(readStream, thumbnail.ContentType, thumbnail.StoragePath);
+                }
+
+                using (var writeStream = _cache.OpenWriteStream(thumbnail))
+                {
+                    await _fileSystemService.CopyToStreamAsync(thumbnail, writeStream, _cancellationToken);
+                }
+
+                if (_cache.IsCached(thumbnail))
+                {
+                    var readStream = _cache.OpenReadStream(thumbnail);
+                    return File(readStream, thumbnail.ContentType, thumbnail.StoragePath);
+                }
+            }
+
+            using (var mem = new MemoryStream())
+            {
+                await _fileSystemService.CopyToStreamAsync(thumbnail, mem, _cancellationToken);
+                return File(mem.ToArray(), thumbnail.ContentType, thumbnail.StoragePath);
+            }
+        }
+
         [HttpGet, Authorize, AllowAnonymous, Route("/{fileSystemId:guid}/{**catchAll}")]
         public async Task<IActionResult> GetContentAsync(Guid? fileSystemId)
         {
-            _tenantProvider.SetTenant(1);
             var path = FileSystemPath.FromString(Request.Path.Value, _tenantProvider?.ActiveTenant?.Id);
             if (!path.IsValid)
             {
