@@ -168,15 +168,12 @@ namespace Minio.FileSystem.WebApi.Controllers
         [HttpPost, ApiKey, Route("/filesystem/createZip")]
         public async Task<FileSystemItemEntity> CreateZipAsync([FromBody] CreateZipModel model)
         {
-            var path = FileSystemPath.FromString(model.VirtualPath, model.TenantId);
-
-            if (model.Ids != null)
+            if (model.Ids == null)
             {
-                return await _fileSystemService.CreateZipAsync(model.Ids, path, _cancellationToken);
+                return null;
             }
 
-            var ids = await _fileSystemService.GetIdsAsync(model.VirtualPaths, model.TenantId, _cancellationToken);
-            return await _fileSystemService.CreateZipAsync(ids, path, _cancellationToken);
+            return await _fileSystemService.CreateZipAsync(model.Ids, _cancellationToken);
         }
 
         [HttpPost, ApiKey, Route("/filesystem/unzip")]

@@ -405,10 +405,14 @@ namespace Minio.FileSystem.Services
             await _zipAsync(new FileSystemItemEntity[] { fileSystemItem }, stream, cancellationToken);
         }
 
-        public async Task<FileSystemItemEntity> CreateZipAsync(IEnumerable<Guid> ids, FileSystemPath path, CancellationToken cancellationToken = default)
+        public async Task<FileSystemItemEntity> CreateZipAsync(IEnumerable<Guid> ids, /*FileSystemPath path,*/ CancellationToken cancellationToken = default)
         {
             var fileSystemItems = await GetManyAsync(ids, cancellationToken);
-            var fileSystemItem = await FindAsync(path, cancellationToken);
+            if (fileSystemItems == null || !fileSystemItems.Any())
+            {
+                return null;
+            }
+            //var fileSystemItem = await FindAsync(path, cancellationToken);
 
             var localPath = Path.GetTempFileName();
 
@@ -421,17 +425,16 @@ namespace Minio.FileSystem.Services
 
                 using (var stream = File.OpenRead(localPath))
                 {
-                    if (fileSystemItem == null)
-                    {
-                        return await _addAsync(path, "application/zip", stream, cancellationToken);
-                    }
+                    var fileSystemItem = fileSystemItems.FirstOrDefault();
+                    var path = FileSystemPath.FromString($"{fileSystemItem.VirtualPath}.zip", fileSystemItem.TenantId);
+                    return await _addAsync(path, "application/zip", stream, cancellationToken);
 
-                    return await _updateAsync(fileSystemItem, path, "application/zip", stream, cancellationToken);
+                    //return await _updateAsync(fileSystemItem, path, "application/zip", stream, cancellationToken);
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Unable to create Zip {path.VirtualPath}");
+                _logger.LogError(e, $"Unable to create Zip");
             }
             finally
             {

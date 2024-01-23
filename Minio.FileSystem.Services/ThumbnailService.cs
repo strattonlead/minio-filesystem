@@ -1,4 +1,4 @@
-﻿using ImageMagick;
+﻿using AnimatedGif;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -145,42 +145,47 @@ namespace Minio.FileSystem.Services
         {
             using (var image = Image.FromStream(stream))
             {
-                int quality = 75;
-                int imageWidth = image.Width;
-                int imageHeight = image.Height;
+                return Resize(image, width, height);
+            }
+        }
 
-                if (imageWidth > width && imageHeight > height)
+        public byte[] Resize(Image image, int width, int height)
+        {
+            int quality = 75;
+            int imageWidth = image.Width;
+            int imageHeight = image.Height;
+
+            if (imageWidth > width && imageHeight > height)
+            {
+                if (image.Width > image.Height)
                 {
-                    if (image.Width > image.Height)
-                    {
-                        imageWidth = width;
-                        imageHeight = Convert.ToInt32(image.Height * width / (double)image.Width);
-                    }
-                    else
-                    {
-                        imageWidth = Convert.ToInt32(image.Width * height / (double)image.Height);
-                        imageHeight = height;
-                    }
+                    imageWidth = width;
+                    imageHeight = Convert.ToInt32(image.Height * width / (double)image.Width);
                 }
-
-                var resized = new Bitmap(imageWidth, imageHeight);
-                using (var graphics = Graphics.FromImage(resized))
+                else
                 {
-                    graphics.CompositingQuality = CompositingQuality.HighSpeed;
-                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    graphics.CompositingMode = CompositingMode.SourceCopy;
-                    graphics.DrawImage(image, 0, 0, imageWidth, imageHeight);
-                    using (var output = new MemoryStream())
-                    {
-                        var qualityParamId = Encoder.Quality;
-                        var encoderParameters = new EncoderParameters(1);
-                        encoderParameters.Param[0] = new EncoderParameter(qualityParamId, quality);
-                        var codec = ImageCodecInfo.GetImageDecoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Png.Guid);
-                        resized.Save(output, codec, encoderParameters);
+                    imageWidth = Convert.ToInt32(image.Width * height / (double)image.Height);
+                    imageHeight = height;
+                }
+            }
 
-                        output.Seek(0, SeekOrigin.Begin);
-                        return output.ToArray();
-                    }
+            var resized = new Bitmap(imageWidth, imageHeight);
+            using (var graphics = Graphics.FromImage(resized))
+            {
+                graphics.CompositingQuality = CompositingQuality.HighSpeed;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.DrawImage(image, 0, 0, imageWidth, imageHeight);
+                using (var output = new MemoryStream())
+                {
+                    var qualityParamId = Encoder.Quality;
+                    var encoderParameters = new EncoderParameters(1);
+                    encoderParameters.Param[0] = new EncoderParameter(qualityParamId, quality);
+                    var codec = ImageCodecInfo.GetImageDecoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Png.Guid);
+                    resized.Save(output, codec, encoderParameters);
+
+                    output.Seek(0, SeekOrigin.Begin);
+                    return output.ToArray();
                 }
             }
         }
@@ -271,76 +276,83 @@ namespace Minio.FileSystem.Services
             var frames = await _extractFramesFromVideoAsync(fileSystemItem, cancellationToken);
             var firstImage = frames.ExtractedImages.FirstOrDefault();
             var result = new List<ThumbnailEntity>();
+            var localPath = Path.GetTempFileName();
 
-            using (var fileStream = File.OpenRead(firstImage.Path))
+            try
             {
-                var bytes = Resize(fileStream, width, height);
+                using (var fileStream = File.OpenRead(firstImage.Path))
+                {
+                    var bytes = Resize(fileStream, width, height);
 
+                    var pngThumbnail = new ThumbnailEntity()
+                    {
+                        Width = width,
+                        Height = height,
+                        FileSystemItemId = fileSystemItem.Id,
+                        ContentType = "image/png",
+                        ThumbnailType = ThumbnailType.Image,
+                        SizeInBytes = bytes.Length,
+                        TenantId = fileSystemItem.TenantId,
+                        Data = bytes
+                    };
+
+                    //using (var mem = new MemoryStream())
+                    //{
+                    //    mem.Write(bytes);
+                    //    mem.Seek(0, SeekOrigin.Begin);
+                    //    await _processUploadAsync(thumbnail, mem, cancellationToken);
+                    //}
+                    result.Add(pngThumbnail);
+                }
+
+                using (var gif = AnimatedGif.AnimatedGif.Create(localPath, 1000))
+                {
+
+                    foreach (var image in frames.ExtractedImages)
+                    {
+                        var img = Image.FromFile(image.Path);
+                        var bytes = Resize(img, width, height);
+                        using (var mem = new MemoryStream())
+                        {
+                            mem.Write(bytes);
+                            mem.Seek(0, SeekOrigin.Begin);
+                            var resized = Image.FromStream(mem);
+                            gif.AddFrame(resized, delay: -1, quality: GifQuality.Bit8);
+                        }
+                    }
+                }
+
+                var gifBytes = File.ReadAllBytes(localPath);
                 var thumbnail = new ThumbnailEntity()
                 {
                     Width = width,
                     Height = height,
                     FileSystemItemId = fileSystemItem.Id,
-                    ContentType = "image/png",
-                    ThumbnailType = ThumbnailType.Image,
-                    SizeInBytes = bytes.Length,
+                    ContentType = "image/gif",
+                    ThumbnailType = ThumbnailType.Gif,
+                    SizeInBytes = gifBytes.Length,
                     TenantId = fileSystemItem.TenantId,
-                    Data = bytes
+                    Data = gifBytes
                 };
-
-                //using (var mem = new MemoryStream())
-                //{
-                //    mem.Write(bytes);
-                //    mem.Seek(0, SeekOrigin.Begin);
-                //    await _processUploadAsync(thumbnail, mem, cancellationToken);
-                //}
                 result.Add(thumbnail);
             }
-
-            using (var collection = new MagickImageCollection())
+            catch (Exception e)
             {
-                foreach (var image in frames.ExtractedImages)
+                _logger.LogError(e, $"Unable to create thumbnails for {fileSystemItem?.Id}");
+            }
+            finally
+            {
+                if (File.Exists(frames.Path))
                 {
-                    collection.Add(image.Path);
+                    File.Delete(frames.Path);
                 }
 
-                foreach (var item in collection)
+                if (File.Exists(localPath))
                 {
-                    item.AnimationDelay = 1000;
-                    item.Resize(width, height);
-                }
-
-                var settings = new QuantizeSettings();
-                collection.Quantize(settings);
-                collection.Optimize();
-
-                var path = Path.Combine(frames.Path, "");
-                using (var stream = new MemoryStream())
-                {
-                    collection.Write(stream);
-                    stream.Seek(0, SeekOrigin.Begin);
-
-                    var thumbnail = new ThumbnailEntity()
-                    {
-                        Width = width,
-                        Height = height,
-                        FileSystemItemId = fileSystemItem.Id,
-                        ContentType = "image/gif",
-                        ThumbnailType = ThumbnailType.Gif,
-                        SizeInBytes = stream.Length,
-                        TenantId = fileSystemItem.TenantId,
-                        Data = stream.ToArray()
-                    };
-
-                    //await _processUploadAsync(thumbnail, stream, cancellationToken);
-                    result.Add(thumbnail);
+                    File.Delete(localPath);
                 }
             }
 
-            if (File.Exists(frames.Path))
-            {
-                File.Delete(frames.Path);
-            }
 
             return result.ToArray();
         }
@@ -380,7 +392,7 @@ namespace Minio.FileSystem.Services
                 _logger.LogInformation($"Video Stream -> StreamType: {videoStream.StreamType}");
                 _logger.LogInformation($"-----------------------------");
 
-                var everyNth = (int)videoStream.Framerate * 2;
+                var everyNth = (int)videoStream.Framerate * 10;
 
                 _logger.LogInformation($"EveryNth: {everyNth}");
                 _logger.LogInformation($"-----------------------------");
