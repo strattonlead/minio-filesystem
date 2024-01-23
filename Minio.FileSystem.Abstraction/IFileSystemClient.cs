@@ -84,6 +84,11 @@ namespace Minio.FileSystem.Abstraction
         Task<FileSystemItem> CreateZipAsync(CreateZipModel model, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// /filesystem/unzip
+        /// </summary>
+        Task<FileSystemItem> UnzipAsync(UnzipModel model, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// /filesystem/createFileSystem
         /// </summary>
         Task<Models.FileSystem> CreateFileSystemAsync(CreateFileSystemModel model, CancellationToken cancellationToken = default);

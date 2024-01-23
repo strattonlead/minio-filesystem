@@ -179,6 +179,16 @@ namespace Minio.FileSystem.WebApi.Controllers
             return await _fileSystemService.CreateZipAsync(ids, path, _cancellationToken);
         }
 
+        [HttpPost, ApiKey, Route("/filesystem/unzip")]
+        public async Task<bool> UnzipAsync([FromBody] UnzipModel model)
+        {
+            if (model.Id.HasValue)
+            {
+                return await _fileSystemService.UnzipAsync(model.Id.Value, _cancellationToken);
+            }
+            return false;
+        }
+
         [HttpGet, ApiKey, Route("/filesystem/download")]
         public async Task<IActionResult> DownloadAsync([FromQuery] Guid id)
         {

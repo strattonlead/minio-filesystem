@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Minio.FileSystem.Abstraction;
 using Minio.FileSystem.Backend;
 using Muffin.Tenancy.Services.Abstraction;
@@ -25,6 +27,7 @@ namespace Minio.FileSystem.Services
         private readonly IMinioClient _minioClient;
         private readonly ApplicationOptions _options;
         private readonly ITenantProvider _tenantProvider;
+        private readonly ILogger _logger;
 
         #endregion
 
@@ -36,6 +39,7 @@ namespace Minio.FileSystem.Services
             _minioClient = serviceProvider.GetRequiredService<IMinioClient>();
             _tenantProvider = serviceProvider.GetRequiredService<ITenantProvider>();
             _options = serviceProvider.GetRequiredService<ApplicationOptions>();
+            _logger = serviceProvider.GetRequiredService<ILogger<FileSystemService>>();
         }
 
         #endregion
@@ -425,7 +429,10 @@ namespace Minio.FileSystem.Services
                     return await _updateAsync(fileSystemItem, path, "application/zip", stream, cancellationToken);
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Unable to create Zip {path.VirtualPath}");
+            }
             finally
             {
                 if (File.Exists(localPath))
@@ -437,9 +444,84 @@ namespace Minio.FileSystem.Services
             return null;
         }
 
+        public async Task<bool> UnzipAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var item = await GetAsync(id, cancellationToken);
+            if (item == null)
+            {
+                return false;
+            }
+
+            if (item.ContentType != "application/zip")
+            {
+                return false;
+            }
+
+            var localPath = Path.GetTempFileName();
+            try
+            {
+                using (var stream = File.OpenWrite(localPath))
+                {
+                    var success = await CopyToStreamAsync(item, stream, cancellationToken);
+                    if (!success)
+                    {
+                        return false;
+                    }
+                }
+
+                using (var stream = File.OpenRead(localPath))
+                using (var zipArchive = new ZipArchive(stream, ZipArchiveMode.Read, true))
+                {
+                    foreach (var entry in zipArchive.Entries)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return false;
+                        }
+
+                        if (entry.Name.EndsWith("/"))
+                        {
+                            continue;
+                        }
+
+                        using (var entryStream = entry.Open())
+                        {
+                            var path = FileSystemPath.FromString(entry.FullName, item.TenantId);
+                            var contentType = _getMimeType(entry.Name);
+                            await _addAsync(path, contentType, entryStream, cancellationToken);
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Unable to unzip {id}");
+            }
+            finally
+            {
+                if (File.Exists(localPath))
+                {
+                    File.Delete(localPath);
+                }
+            }
+            return false;
+        }
+
         #endregion
 
         #region Helpers
+
+        private string _getMimeType(string fileName)
+        {
+            var provider = new FileExtensionContentTypeProvider();
+            if (!provider.TryGetContentType(fileName, out var contentType))
+            {
+                contentType = "application/octet-stream";
+            }
+            return contentType;
+        }
 
         private async Task _zipAsync(IEnumerable<FileSystemItemEntity> fileSystemItems, Stream stream, CancellationToken cancellationToken = default)
         {
