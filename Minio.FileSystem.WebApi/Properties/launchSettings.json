@@ -5,7 +5,17 @@
       "launchBrowser": true,
       "launchUrl": "swagger/index.html",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "NPGSQL_CONNECTION_STRING": "Host=195.201.39.233; Database=ds.development.minio; Username=postgres; Password=81ffc18ba6b64fe7a31cfcfc4d1d5f43a81c6c58",
+        "USE_DATA_PROTECTION": "true",
+        "DATA_PROTECTION_CONNECTION_STRING": "Host=195.201.39.233; Database=ds.development; Username=postgres; Password=81ffc18ba6b64fe7a31cfcfc4d1d5f43a81c6c58",
+        "API_KEY": "64f9c16855eaa3b7a646aaf2212949d82d5fb574",
+        "TENANCY_CLAIM_NAME": "tenant_id",
+        "TENANCY_ENABLED": "true",
+        "S3_BUCKET_NAME": "ds-t-{0}",
+        "S3_SECRET_KEY": "6G4cRGQu0nHXh3JckQc3yU4FxrTmOtYRrjrrQxla",
+        "S3_ACCESS_KEY": "0816dffe57b9e1b9e7be",
+        "S3_ENDPOINT": "s3-eu-central-1.ionoscloud.com"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7236;http://localhost:5236"

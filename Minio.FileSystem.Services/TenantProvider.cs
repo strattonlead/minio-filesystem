@@ -16,11 +16,13 @@ namespace Minio.FileSystem.Services
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ApplicationOptions _options;
+        private readonly ApiKeyProvider _apiKeyProvider;
 
         public TenantProvider(IServiceProvider serviceProvider)
         {
             _httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
             _options = serviceProvider.GetRequiredService<ApplicationOptions>();
+            _apiKeyProvider = serviceProvider.GetService<ApiKeyProvider>();
         }
 
         private ITenant _tenant = null;
@@ -40,6 +42,20 @@ namespace Minio.FileSystem.Services
                     if (long.TryParse(sTenantId, out var tenantId))
                     {
                         _tenant = new Tenant() { Id = tenantId };
+                    }
+                }
+
+                if (_apiKeyProvider != null)
+                {
+                    var apiKey = _apiKeyProvider.GetApiKey();
+                    if (apiKey != null)
+                    {
+#warning TODO hier muss noch was generisches her
+                        var sTenantId = apiKey.Split(".").FirstOrDefault();
+                        if (long.TryParse(sTenantId, out var tenantId))
+                        {
+                            _tenant = new Tenant() { Id = tenantId };
+                        }
                     }
                 }
 

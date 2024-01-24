@@ -107,6 +107,30 @@ if (useAuthentication)
             options.ExpireTimeSpan = expireTimeSpan;
         });
     }
+    bool.TryParse(Environment.GetEnvironmentVariable("USE_API_KEY_AUTHENTICATION"), out var useApiKeyAuthentication);
+    if (useApiKeyAuthentication)
+    {
+        if (!useDataProtection)
+        {
+            throw new ArgumentException("USE_DATA_PROTECTION must be true when using USE_API_KEY_AUTHENTICATION");
+        }
+
+        var dataProtectionPurpose = Environment.GetEnvironmentVariable("DATA_PROTECTION_PURPOSE");
+        if (string.IsNullOrWhiteSpace(dataProtectionPurpose))
+        {
+            throw new Exception("DATA_PROTECTION_PURPOSE must be set!");
+        }
+
+        var apiKeyHeaderName = Environment.GetEnvironmentVariable("API_KEY_HEADER_NAME");
+        if (string.IsNullOrWhiteSpace(apiKeyHeaderName))
+        {
+            throw new Exception("API_KEY_HEADER_NAME must be set! (e.g. X-API-Key)");
+        }
+
+        builder.Services.AddSingleton<ApiKeyProvider>();
+    }
+
+
 }
 
 var app = builder.Build();
