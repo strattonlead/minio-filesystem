@@ -27,7 +27,12 @@ namespace Minio.FileSystem.Services
             {
                 return null;
             }
-            return _dataProtector.Unprotect(encryptedData);
+            try
+            {
+                return _dataProtector.Unprotect(encryptedData);
+            }
+            catch { }
+            return null;
         }
     }
 }

@@ -45,7 +45,7 @@ namespace Minio.FileSystem.Services
                     }
                 }
 
-                if (_apiKeyProvider != null)
+                if (_tenant == null && _apiKeyProvider != null)
                 {
                     var apiKey = _apiKeyProvider.GetApiKey();
                     if (apiKey != null)
